@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SHOW_LOGS_RAW="${1:-false}"
+
+if [[ "${SHOW_LOGS_RAW}" == "-h" || "${SHOW_LOGS_RAW}" == "--help" ]]; then
+  echo "Usage: scripts/start-local-dev.sh [show_logs]"
+  echo "  show_logs=true  -> show logs in terminal and logs/*.log"
+  echo "  show_logs=false -> write logs to logs/*.log (default)"
+  exit 0
+fi
+
+SHOW_LOGS="$(echo "${SHOW_LOGS_RAW}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${SHOW_LOGS}" == "true" || "${SHOW_LOGS}" == "1" || "${SHOW_LOGS}" == "yes" || "${SHOW_LOGS}" == "y" ]]; then
+  SHOW_LOGS="true"
+else
+  SHOW_LOGS="false"
+fi
+LOG_DIR="${ROOT_DIR}/logs"
+
+export PYENV_VERSION="3.12.9"
+export API_BASE_URL="http://localhost:8000"
+export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment"
+export PYTHONPATH="src"
+export DASHBOARD_DEBUG="1"
+export PYTHONUNBUFFERED="1"
+
+free_port() {
+  local port="$1"
+  local pids
+
+  pids="$(lsof -ti :"${port}" 2>/dev/null || true)"
+  if [[ -z "${pids}" ]]; then
+    return
+  fi
+
+  kill ${pids} 2>/dev/null || true
+  sleep 1
+
+  pids="$(lsof -ti :"${port}" 2>/dev/null || true)"
+  if [[ -n "${pids}" ]]; then
+    kill -9 ${pids} 2>/dev/null || true
+  fi
+}
+
+cleanup() {
+  if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
+    return
+  fi
+  CLEANUP_DONE=1
+
+  if [[ -n "${API_PID:-}" ]]; then kill "${API_PID}" 2>/dev/null || true; fi
+  if [[ -n "${DASHBOARD_PID:-}" ]]; then kill "${DASHBOARD_PID}" 2>/dev/null || true; fi
+  if [[ -n "${WORKER_PID:-}" ]]; then kill "${WORKER_PID}" 2>/dev/null || true; fi
+
+  local job_pids
+  job_pids="$(jobs -pr || true)"
+  if [[ -n "${job_pids}" ]]; then
+    kill ${job_pids} 2>/dev/null || true
+  fi
+
+  wait 2>/dev/null || true
+}
+
+on_interrupt() {
+  cleanup
+  exit 130
+}
+
+start_process() {
+  local process_name="$1"
+  shift
+
+  if [[ "${SHOW_LOGS}" == "true" ]]; then
+    "$@" > >(sed -u "s/^/[${process_name}] /" | tee "${LOG_DIR}/${process_name}.log") 2>&1 &
+  else
+    "$@" >"${LOG_DIR}/${process_name}.log" 2>&1 &
+  fi
+  STARTED_PID="$!"
+}
+
+trap on_interrupt INT TERM
+trap cleanup EXIT
+
+cd "${ROOT_DIR}"
+docker compose up -d db
+free_port 8000
+free_port 8050
+mkdir -p "${LOG_DIR}"
+: > "${LOG_DIR}/api.log"
+: > "${LOG_DIR}/dashboard.log"
+: > "${LOG_DIR}/worker.log"
+
+start_process api pyenv exec python -m uvicorn reddit_sentiment.api.main:app --host 0.0.0.0 --port 8000 --reload --access-log
+API_PID="${STARTED_PID}"
+
+start_process dashboard pyenv exec python -m reddit_sentiment.dashboard_runner
+DASHBOARD_PID="${STARTED_PID}"
+
+start_process worker pyenv exec python -m reddit_sentiment.worker
+WORKER_PID="${STARTED_PID}"
+
+wait

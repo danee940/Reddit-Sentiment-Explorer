@@ -1,0 +1,254 @@
+\chapter{System Design and Architecture}
+\label{ch:system_design}
+
+This chapter presents the design of Reddit Sentiment Explorer. I begin with the functional and non-functional requirements, then describe the high-level architecture, the data model, the query pipeline, the sentiment classification strategy, and the dashboard visualization design. Each design decision is motivated by the requirements and the gaps identified in the literature review.
+
+\section{Requirements Analysis}
+\label{sec:requirements}
+
+\subsection{Functional Requirements}
+
+Based on the use case of ad-hoc sentiment exploration, I identify the following functional requirements:
+
+\begin{enumerate}
+    \item \textbf{FR1: Query by term.} A user must be able to enter an arbitrary search term and receive sentiment analysis results for Reddit content mentioning that term.
+    \item \textbf{FR2: Subreddit scoping.} A user must be able to specify which subreddits to search, with sensible defaults provided.
+    \item \textbf{FR3: Language filtering.} The system must filter collected content by a user-selected language so that the sentiment analysis operates on text in the expected language.
+    \item \textbf{FR4: Sentiment classification.} Each matched document must be classified on a five-point sentiment scale with a label, numeric score, confidence, rationale, and evidence phrases.
+    \item \textbf{FR5: Aggregation and visualization.} The system must aggregate classification results into overview statistics, distribution charts, timelines, heatmaps, and subreddit breakdowns.
+    \item \textbf{FR6: Document exploration.} A user must be able to view individual matched documents with their sentiment classification details.
+    \item \textbf{FR7: Result caching.} If a recent result exists for the same term, subreddit scope, and language, the system should reuse it instead of re-running the pipeline.
+    \item \textbf{FR8: Query refresh.} A user must be able to force a fresh re-run of a previously completed query.
+\end{enumerate}
+
+\subsection{Non-Functional Requirements}
+
+\begin{enumerate}
+    \item \textbf{NFR1: Modularity.} The system must separate data collection, matching, language filtering, sentiment classification, and aggregation into distinct components.
+    \item \textbf{NFR2: Provider agnosticism.} The sentiment classification component must support swapping providers without changes to the rest of the system.
+    \item \textbf{NFR3: Extensibility.} New aggregate types, chart visualizations, or data sources should be addable without restructuring existing code.
+    \item \textbf{NFR4: Deployability.} The entire system must be deployable with a single command using container orchestration.
+    \item \textbf{NFR5: Responsiveness.} The dashboard must remain interactive while a query pipeline runs in the background, providing status updates to the user.
+\end{enumerate}
+
+\section{High-Level Architecture}
+\label{sec:architecture}
+
+Reddit Sentiment Explorer uses a four-service architecture. Figure~\ref{fig:architecture} illustrates the services and their communication paths.
+
+\begin{figure}[H]
+    \centering
+    \begin{tabular}{c}
+    \fbox{\parbox{0.9\textwidth}{
+    \centering
+    \vspace{0.5em}
+    \textbf{Reddit Sentiment Explorer --- Service Architecture} \\[1em]
+    \begin{tabular}{ccc}
+    \fbox{\parbox{3.5cm}{\centering \textbf{Dashboard} \\ Plotly Dash \\ Port 8050}} &
+    $\longleftrightarrow$ &
+    \fbox{\parbox{3.5cm}{\centering \textbf{API} \\ FastAPI \\ Port 8000}} \\[1.5em]
+    & &
+    $\updownarrow$ \\[0.5em]
+    \fbox{\parbox{3.5cm}{\centering \textbf{Worker} \\ Async Python \\ Background}} &
+    $\longleftrightarrow$ &
+    \fbox{\parbox{3.5cm}{\centering \textbf{PostgreSQL} \\ Database \\ Port 5432}} \\
+    \end{tabular}
+    \vspace{0.5em}
+    }}
+    \end{tabular}
+    \caption{Four-service architecture of Reddit Sentiment Explorer. The Dashboard communicates with the API over HTTP. Both the API and the Worker read from and write to PostgreSQL. The Worker also makes external calls to Arctic Shift for data collection and to the OpenAI API for sentiment classification.}
+    \label{fig:architecture}
+\end{figure}
+
+The four services are:
+
+\begin{description}
+    \item[API (FastAPI)] exposes REST endpoints for creating queries, retrieving run status, fetching chart data, and listing matched documents. It writes new query runs to the database with a ``pending'' status and returns immediately, satisfying NFR5.
+
+    \item[Worker] is a long-running Python process that polls the database for pending query runs. When it claims a run, it executes the full pipeline: data collection, matching, language filtering, sentiment classification, and aggregation. The worker communicates with external services (Arctic Shift, OpenAI) and writes all results to the database.
+
+    \item[Dashboard (Plotly Dash)] is the user-facing web application. It provides the search interface, displays visualizations, and polls the API for status updates during query execution. The dashboard does not access the database directly; all data flows through the API.
+
+    \item[PostgreSQL] is the central data store. It holds queries, query runs, subreddits, posts, comments, documents, matches, sentiment results, and aggregates. It also serves as the implicit task queue: the worker claims pending runs by locking rows with \texttt{FOR UPDATE SKIP LOCKED}.
+\end{description}
+
+This architecture satisfies NFR1 (modularity) by separating concerns across services and NFR4 (deployability) by containerizing each service with Docker Compose.
+
+\section{Data Model}
+\label{sec:data_model}
+
+The data model consists of nine entities organized around the query lifecycle. Figure~\ref{fig:er_diagram} provides an overview, and Table~\ref{tab:entities} summarizes each entity.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.95\textwidth}{
+    \centering
+    \vspace{0.5em}
+    \textbf{Entity Relationships} \\[0.5em]
+    \small
+    \texttt{Query} $\xrightarrow{\text{1:N}}$ \texttt{QueryRun} $\xrightarrow{\text{1:N}}$ \texttt{QueryDocumentMatch} $\xleftarrow{\text{N:1}}$ \texttt{Document} \\[0.3em]
+    \texttt{QueryRun} $\xrightarrow{\text{1:N}}$ \texttt{SentimentResult} $\xleftarrow{\text{N:1}}$ \texttt{Document} \\[0.3em]
+    \texttt{QueryRun} $\xrightarrow{\text{1:N}}$ \texttt{Aggregate} \\[0.3em]
+    \texttt{Subreddit} $\xleftarrow{\text{N:1}}$ \texttt{Post} $\xrightarrow{\text{1:N}}$ \texttt{Comment} \\[0.3em]
+    \texttt{Document} references either a \texttt{Post} or a \texttt{Comment} via \texttt{source\_type} and \texttt{source\_id}
+    \vspace{0.5em}
+    }}
+    \caption{Entity relationship overview. Arrows indicate one-to-many relationships.}
+    \label{fig:er_diagram}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Summary of data model entities}
+\label{tab:entities}
+\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Entity} & \textbf{Description} \\
+\midrule
+Query & A unique search term (stored both as raw input and normalized form). \\
+QueryRun & A single execution of the pipeline for a query, with status tracking (pending, running, completed, failed), subreddit scope, and language filter. \\
+Subreddit & A Reddit community, with flags for whether it is enabled and whether it is a default. \\
+Post & A Reddit post with title, body, author, score, timestamp, and permalink. \\
+Comment & A Reddit comment linked to its parent post, with body, author, score, timestamp, and permalink. \\
+Document & A unified text representation of either a post or a comment. The document abstraction decouples sentiment analysis from the Reddit-specific post/comment distinction. \\
+QueryDocumentMatch & A link between a query run and a document, recording the match type (phrase or token) and relevance score. \\
+SentimentResult & The sentiment classification for a document within a query run, including label, score, confidence, rationale, evidence phrases, and provider metadata. \\
+Aggregate & A precomputed chart payload for a query run, keyed by aggregate type (overview, timeline, distribution, heatmap, etc.). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The \textbf{Document} entity is a key design decision. Instead of classifying posts and comments separately, the system normalizes both into a common document representation. This simplifies the matching, classification, and aggregation logic: every downstream component operates on documents regardless of whether the underlying source is a post or a comment.
+
+\section{Query Pipeline Design}
+\label{sec:pipeline_design}
+
+The query pipeline is the core workflow of the system. It transforms a user's search term into classified, aggregated results. Figure~\ref{fig:pipeline} shows the pipeline stages.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox{0.95\textwidth}{
+    \centering
+    \vspace{0.5em}
+    \textbf{Query Pipeline Stages} \\[0.5em]
+    \small
+    \texttt{Collect} $\rightarrow$ \texttt{Persist} $\rightarrow$ \texttt{Match} $\rightarrow$ \texttt{Filter Language} $\rightarrow$ \texttt{Classify Sentiment} $\rightarrow$ \texttt{Aggregate} \\[0.5em]
+    \vspace{0.5em}
+    }}
+    \caption{The six stages of the query pipeline, executed sequentially for each query run.}
+    \label{fig:pipeline}
+\end{figure}
+
+\subsection{Stage 1: Collect}
+
+The collector fetches posts and comments from the Arctic Shift API for each subreddit in the query run's scope. It sends separate search requests for posts and comments, each parameterized by the search term and subreddit name. The results are normalized into internal data classes (\texttt{CollectedPost} and \texttt{CollectedComment}) that decouple the pipeline from the external API format.
+
+\subsection{Stage 2: Persist}
+
+Each collected post and comment is stored in the database. If a post or comment already exists (identified by its Reddit ID), the existing record is reused. This deduplication ensures that repeated queries for the same subreddits do not create duplicate records.
+
+\subsection{Stage 3: Match}
+
+The search service determines whether a post or comment matches the user's search term. Matching uses a two-tier strategy:
+
+\begin{enumerate}
+    \item \textbf{Phrase matching}: The normalized search term is checked as a substring of the normalized text. If found, the match is recorded as a phrase match (e.g., \texttt{title\_phrase}, \texttt{body\_phrase}, \texttt{comment\_phrase}).
+    \item \textbf{Token fallback}: If phrase matching fails for multi-word terms, the service checks whether all individual tokens of the search term appear in the text. If they do, the match is recorded as a token match (e.g., \texttt{title\_tokens}, \texttt{body\_tokens}).
+\end{enumerate}
+
+This two-tier approach balances precision (phrase matches are more relevant) with recall (token matches capture cases where the words appear but not as an exact phrase).
+
+\subsection{Stage 4: Filter Language}
+
+For each matched post or comment, the language service detects the text's language using the \texttt{langdetect} library and compares it against the query run's language filter. A confidence threshold of 0.7 is used: if the detected language matches the filter with at least 70\% confidence, the text is accepted. If the text does not match or is too short for reliable detection, it is excluded.
+
+This stage produces a \texttt{Document} entity that stores the full text along with the detected language and confidence score.
+
+\subsection{Stage 5: Classify Sentiment}
+
+Each matched document is classified using the configured sentiment provider. The classification returns a \texttt{SentimentPrediction} containing:
+
+\begin{itemize}
+    \item A \textbf{label}: one of \texttt{very\_negative}, \texttt{negative}, \texttt{neutral}, \texttt{positive}, \texttt{very\_positive}.
+    \item A \textbf{score value}: an integer from $-2$ to $+2$ mapping to the label.
+    \item A \textbf{confidence}: a floating-point value between 0 and 1.
+    \item A \textbf{rationale}: a short explanation of the classification in the same language as the input text.
+    \item \textbf{Evidence phrases}: one to three exact quotes from the input text that support the classification.
+\end{itemize}
+
+The sentiment service checks whether a result already exists for the same document and provider. If so, it reuses the existing result, avoiding redundant API calls when the same document appears in multiple query runs.
+
+\subsection{Stage 6: Aggregate}
+
+The aggregation service computes precomputed chart payloads from the sentiment results. Nine aggregate types are supported:
+
+\begin{enumerate}
+    \item \textbf{Overview}: total documents, average sentiment score, most common label, positive and negative ratios.
+    \item \textbf{Sentiment distribution}: count of documents per label.
+    \item \textbf{Sentiment timeline}: average sentiment score per day.
+    \item \textbf{Volume timeline}: count of documents per day.
+    \item \textbf{Rolling sentiment timeline}: seven-day rolling average of sentiment scores.
+    \item \textbf{Subreddit breakdown}: average sentiment and document count per subreddit.
+    \item \textbf{Sentiment heatmap}: document counts bucketed by day of week and hour of day.
+    \item \textbf{Phrase breakdown}: match type distribution (phrase vs. token matches).
+    \item \textbf{Spike events}: days with unusually high volume or extreme sentiment.
+\end{enumerate}
+
+Precomputing aggregates avoids expensive queries each time the dashboard requests chart data. The aggregates are stored as JSON payloads in the \texttt{aggregates} table, keyed by query run ID and aggregate type.
+
+\subsection{State Machine}
+
+A query run progresses through four states:
+
+\begin{description}
+    \item[Pending] --- created by the API, waiting for the worker to claim it.
+    \item[Running] --- claimed by the worker, pipeline in progress.
+    \item[Completed] --- pipeline finished successfully, aggregates available.
+    \item[Failed] --- pipeline encountered an error, error message stored.
+\end{description}
+
+If a run remains in the ``running'' state for longer than a configurable threshold (default: 30 minutes), the worker considers it stale and requeues it to ``pending'' for retry. This handles cases where the worker process crashes during execution.
+
+\subsection{Caching Strategy}
+
+Before creating a new query run, the API checks whether a recently completed run exists for the same normalized term, subreddit scope, and language filter. ``Recently'' is defined by a configurable time-to-live (default: 12 hours). If a fresh run exists, the API returns it immediately without creating a new run. This reduces API costs and avoids redundant data collection.
+
+\section{Sentiment Classification Strategy}
+\label{sec:sentiment_strategy}
+
+The sentiment classification layer uses a \textbf{provider abstraction} defined as a Python protocol:
+
+\begin{lstlisting}[language=Python, caption={Sentiment provider protocol}]
+class SentimentProvider(Protocol):
+    async def classify(
+        self, text: str, content_language: str
+    ) -> SentimentPrediction: ...
+\end{lstlisting}
+
+Any class that implements this interface can serve as a sentiment provider. The system includes two providers:
+
+\begin{description}
+    \item[OpenAI provider] sends each document to the OpenAI chat completions API with a carefully designed system prompt that specifies the output JSON schema, the five-point sentiment scale, and the requirement for rationale and evidence phrases. The prompt instructs the model to base its classification only on the provided text and to write the rationale in the same language as the input.
+
+    \item[Mock provider] uses a heuristic word-counting approach with predefined positive and negative word lists in English, Hungarian, and Russian. It is intended for development and testing, providing instant results without API costs.
+\end{description}
+
+The active provider is selected through the \texttt{LLM\_PROVIDER} environment variable, making it possible to switch providers without code changes (satisfying NFR2).
+
+\section{Dashboard and Visualization Design}
+\label{sec:dashboard_design}
+
+The dashboard follows the ``overview first, zoom and filter, then details on demand'' principle from \citeA{shneiderman1996eyes}. It organizes content into five tabs:
+
+\begin{enumerate}
+    \item \textbf{Subreddit Scope}: allows users to add or remove subreddits from the search scope, with validation against the Reddit API.
+    \item \textbf{Search Overview}: displays the main metrics (total documents, average score, sentiment ratio) and the primary charts (sentiment timeline, rolling average, distribution).
+    \item \textbf{Sentiment Trends}: provides detailed temporal analysis with sentiment and volume timelines plus a day-of-week/hour heatmap.
+    \item \textbf{Subreddit Breakdown}: shows per-subreddit sentiment comparison, phrase match distribution, and spike event detection.
+    \item \textbf{Matched Content}: lists individual matched documents with their sentiment labels, scores, rationale, and evidence phrases. Users can click any document to see full details and a link to the original Reddit post or comment.
+\end{enumerate}
+
+The dashboard supports light and dark themes through client-side JavaScript callbacks and provides a language toggle for the UI text (English and Hungarian), using a translation dictionary for all user-facing strings.
+
+While a query is running, the dashboard polls the API every five seconds for status updates and displays a progress indicator. Once the run completes, the charts and document list are populated automatically.

@@ -1,0 +1,541 @@
+\chapter{Implementation}
+\label{ch:implementation}
+
+This chapter describes the implementation of Reddit Sentiment Explorer in detail. I present the technology stack, then walk through each major component: data collection, text matching, language filtering, sentiment classification, aggregation, the API and worker, the interactive dashboard, and the deployment setup. For each component, I include representative code excerpts from the actual implementation to illustrate the key design patterns.
+
+\section{Technology Stack}
+\label{sec:tech_stack}
+
+Table~\ref{tab:tech_stack} summarizes the technologies used in the project and the rationale for each choice.
+
+\begin{table}[H]
+\centering
+\caption{Technology stack overview}
+\label{tab:tech_stack}
+\small
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Rationale} \\
+\midrule
+Language & Python 3.12 & Strong ecosystem for NLP, data processing, and web frameworks. \\
+API & FastAPI + Uvicorn & Async-native, automatic OpenAPI docs, type-safe with Pydantic. \\
+Dashboard & Plotly Dash & Python-native interactive visualization framework. \\
+Database & PostgreSQL 17 & Reliable RDBMS with JSON support and row-level locking. \\
+ORM & SQLAlchemy 2.0 & Industry-standard async ORM with declarative models. \\
+Migrations & Alembic & Tracks schema changes across environments. \\
+HTTP Client & httpx & Async-compatible HTTP client for Arctic Shift and OpenAI calls. \\
+Language Detection & langdetect & Lightweight library supporting 55 languages. \\
+Retry Logic & tenacity & Decorator-based retry with exponential backoff. \\
+Serialization & Pydantic, orjson & Fast validation and serialization. \\
+Charts & Plotly & Feature-rich interactive charting library. \\
+Styling & Tailwind CSS & Utility-first CSS framework for responsive layouts. \\
+Deployment & Docker Compose & Single-command multi-service orchestration. \\
+CI & GitHub Actions & Automated linting (Ruff) and testing (pytest). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Python was chosen because it is the dominant language in the NLP and data science ecosystem, and all major libraries for sentiment analysis, web frameworks, and database access are available. FastAPI was chosen over alternatives like Flask or Django because it provides native async/await support, which is essential for a system that makes concurrent HTTP requests to external APIs.
+
+\section{Data Collection}
+\label{sec:data_collection}
+
+The data collection layer communicates with the Arctic Shift API to fetch Reddit posts and comments. I implemented a collector class that encapsulates all interaction with the external API and normalizes the responses into internal data classes.
+
+\begin{lstlisting}[language=Python, caption={Collector data classes and main collect method}]
+@dataclass(slots=True)
+class CollectedPost:
+    reddit_post_id: str
+    subreddit: str
+    title: str
+    body: str
+    author_name: str | None
+    score: int
+    created_utc: datetime
+    permalink: str
+    raw_payload: dict
+
+class ArcticShiftCollector:
+    async def collect(
+        self,
+        term: str,
+        subreddit_names: list[str],
+        limit: int | None = None,
+    ) -> tuple[list[CollectedPost], list[CollectedComment]]:
+        posts: list[CollectedPost] = []
+        comments: list[CollectedComment] = []
+        async with httpx.AsyncClient(
+            base_url=self.settings.arctic_shift_base_url,
+            timeout=60.0,
+        ) as client:
+            for subreddit_name in subreddit_names:
+                post_payload = await self._request_posts(
+                    client, subreddit_name, term, request_limit,
+                )
+                for item in self._extract_items(post_payload):
+                    post = self._normalize_post(item)
+                    if post is None:
+                        continue
+                    posts.append(post)
+                    comment_payload = await self._request_comments(
+                        client, post.reddit_post_id,
+                        self.settings.arctic_shift_comment_limit,
+                    )
+                    for ci in self._extract_items(comment_payload):
+                        comment = self._normalize_comment(
+                            ci, post.reddit_post_id, post.subreddit,
+                        )
+                        if comment is not None:
+                            comments.append(comment)
+        return posts, comments
+\end{lstlisting}
+
+The collector iterates over each subreddit in the query scope. For each subreddit, it fetches matching posts, then for each post, it fetches the associated comments. Both the post limit and comment limit per post are configurable through environment variables. The raw API responses are normalized into typed data classes (\texttt{CollectedPost} and \texttt{CollectedComment}), which decouple the downstream pipeline from the Arctic Shift API's response format.
+
+The \texttt{\_extract\_items} method handles multiple response formats from the API. It can process both list responses and nested dictionary responses, providing resilience against API format changes.
+
+\section{Text Matching}
+\label{sec:text_matching}
+
+The search service implements a two-tier matching strategy that balances precision and recall.
+
+\begin{lstlisting}[language=Python, caption={Search service with phrase and token matching}]
+def simplify_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value.lower())
+    without_accents = "".join(
+        ch for ch in normalized if not unicodedata.combining(ch)
+    )
+    return re.sub(r"\s+", " ", without_accents).strip()
+
+class SearchService:
+    def __init__(self, term: str) -> None:
+        self.raw_term = term
+        self.normalized_term = simplify_text(term)
+        self.term_tokens = [
+            t for t in self.normalized_term.split(" ") if t
+        ]
+
+    def match_text(
+        self, text: str, source_type: str,
+    ) -> tuple[bool, MatchType | None, list[str], float]:
+        normalized_text = simplify_text(text)
+        if not normalized_text:
+            return False, None, [], 0.0
+        if self.normalized_term in normalized_text:
+            match_type = {
+                "title": MatchType.title_phrase,
+                "body": MatchType.body_phrase,
+                "comment": MatchType.comment_phrase,
+            }[source_type]
+            return True, match_type, [self.raw_term], 1.0
+        if len(self.term_tokens) > 1 and all(
+            token in set(re.findall(r"\w+", normalized_text))
+            for token in self.term_tokens
+        ):
+            match_type = {
+                "title": MatchType.title_tokens,
+                "body": MatchType.body_tokens,
+                "comment": MatchType.comment_tokens,
+            }[source_type]
+            return True, match_type, self.term_tokens, 0.8
+        return False, None, [], 0.0
+\end{lstlisting}
+
+Text normalization is critical for accurate matching. The \texttt{simplify\_text} function converts text to lowercase, removes diacritical marks using Unicode NFKD decomposition, and collapses whitespace. This ensures that a search for ``big mac'' matches text containing ``Big Mac'' or ``BIG MAC''.
+
+Phrase matches receive a relevance score of 1.0, while token matches receive 0.8, reflecting the lower precision of token-based matching. This score is stored with the match record and can be used for ranking in future versions.
+
+\section{Language Filtering}
+\label{sec:language_filtering}
+
+The language service uses the \texttt{langdetect} library to identify the language of each document and compare it against the query run's language filter.
+
+\begin{lstlisting}[language=Python, caption={Language detection and filtering}]
+class LanguageService:
+    def detect(self, text: str) -> tuple[str | None, float | None]:
+        candidate = text.strip()
+        if not candidate:
+            return None, None
+        try:
+            results = detect_langs(candidate)
+        except Exception:
+            return None, None
+        if not results:
+            return None, None
+        best = results[0]
+        return best.lang, float(best.prob)
+
+    def matches_language(
+        self, text: str, target_language: str,
+        threshold: float = 0.7,
+    ) -> tuple[bool, str | None, float | None]:
+        lang, confidence = self.detect(text)
+        normalized_target = normalize_content_language(
+            target_language
+        )
+        normalized_detected = normalize_detected_language(lang)
+        return (
+            normalized_detected == normalized_target
+            and (confidence or 0.0) >= threshold,
+            normalized_detected,
+            confidence,
+        )
+\end{lstlisting}
+
+The 0.7 confidence threshold provides a balance between filtering out off-language content and retaining short texts where language detection is inherently less confident. The \texttt{DetectorFactory.seed = 0} initialization ensures deterministic results across runs, which is important for reproducibility.
+
+\section{Sentiment Classification}
+\label{sec:sentiment_impl}
+
+The sentiment classification layer is built around a provider protocol that defines the interface all sentiment providers must implement.
+
+\begin{lstlisting}[language=Python, caption={Sentiment provider protocol and prediction data class}]
+@dataclass(slots=True)
+class SentimentPrediction:
+    label: SentimentLabel
+    score_value: int
+    confidence: float | None
+    rationale: str | None
+    evidence_phrases: list[str]
+    provider_name: str
+    provider_version: str
+
+class SentimentProvider(Protocol):
+    async def classify(
+        self, text: str, content_language: str,
+    ) -> SentimentPrediction: ...
+\end{lstlisting}
+
+\subsection{OpenAI Provider}
+
+The OpenAI provider sends each document to the chat completions API with a system prompt that precisely specifies the expected JSON output format.
+
+\begin{lstlisting}[language=Python, caption={OpenAI provider --- prompt construction and API call}]
+class OpenAISentimentProvider:
+    async def classify(
+        self, text: str, content_language: str,
+    ) -> SentimentPrediction:
+        language_label = get_language_label(language_code)
+        prompt = (
+            "You are classifying the sentiment of a single "
+            f"Reddit text written in {language_label}. "
+            "Return only one valid JSON object with exactly "
+            "these keys: label, score_value, confidence, "
+            "rationale, evidence_phrases. "
+            "Rules: "
+            "label must be exactly one of very_negative, "
+            "negative, neutral, positive, very_positive. "
+            "score_value must be exactly one of -2, -1, 0, "
+            "1, 2. "
+            "confidence must be a JSON number between 0 "
+            "and 1. "
+            "rationale must be a short explanation in the "
+            "same language as the input text. "
+            "evidence_phrases must be a JSON array containing "
+            "1 to 3 short exact quotes from the input text."
+        )
+        payload = {
+            "model": self.settings.llm_model,
+            "messages": [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": text},
+            ],
+            "response_format": {"type": "json_object"},
+        }
+        data = await self._post_completion(headers, payload)
+        content = data["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        return SentimentPrediction(
+            label=SentimentLabel(parsed["label"]),
+            score_value=int(parsed["score_value"]),
+            confidence=self._normalize_confidence(
+                parsed.get("confidence")
+            ),
+            rationale=parsed.get("rationale"),
+            evidence_phrases=[
+                str(item).strip()
+                for item in parsed.get("evidence_phrases", [])
+                if str(item).strip()
+            ][:3],
+            provider_name="openai",
+            provider_version=get_openai_provider_version(
+                self.settings.llm_model
+            ),
+        )
+\end{lstlisting}
+
+Several design decisions merit discussion:
+
+\begin{itemize}
+    \item The \texttt{response\_format: \{"type": "json\_object"\}} parameter instructs the model to return valid JSON, eliminating the need for markdown stripping or fuzzy JSON parsing.
+    \item The prompt explicitly lists the allowed values for each field, reducing the chance of unexpected outputs.
+    \item The \texttt{evidence\_phrases} field requires exact quotes from the input text, providing verifiable evidence for the classification.
+    \item The \texttt{rationale} is requested in the same language as the input, making it accessible to users who may not read English.
+    \item A \texttt{\_normalize\_confidence} method handles cases where the model returns confidence as a string (e.g., ``high'') instead of a number, mapping named values to numeric equivalents.
+\end{itemize}
+
+The API call is wrapped with tenacity's retry decorator, which retries up to three times with exponential backoff on HTTP errors, JSON decode errors, or value errors.
+
+\begin{lstlisting}[language=Python, caption={Retry-decorated API call}]
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(
+        (httpx.HTTPError, ValueError, json.JSONDecodeError)
+    ),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    stop=stop_after_attempt(3),
+)
+async def _post_completion(
+    self, headers: dict[str, str], payload: dict,
+) -> dict:
+    async with httpx.AsyncClient(
+        base_url=self.settings.llm_api_base_url,
+        timeout=60.0,
+    ) as client:
+        response = await client.post(
+            "/chat/completions",
+            headers=headers, json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+\end{lstlisting}
+
+\subsection{Mock Provider}
+
+The mock provider uses heuristic word counting for development and testing. It maintains word lists for positive and negative terms in English, Hungarian, and Russian, and produces a sentiment label based on the balance of positive and negative word occurrences. While not intended for production use, it enables the full pipeline to be tested without API costs or network access.
+
+\section{Query Pipeline Orchestration}
+\label{sec:pipeline_impl}
+
+The pipeline orchestrator ties all components together in a single async function.
+
+\begin{lstlisting}[language=Python, caption={Main query pipeline function (simplified)}]
+async def run_query_pipeline(
+    session: AsyncSession,
+    query_run: QueryRun,
+    term: str,
+    subreddit_names: list[str],
+) -> None:
+    query_service = QueryService(session)
+    language_service = LanguageService()
+    search_service = SearchService(term)
+    collector = ArcticShiftCollector()
+    sentiment_service = SentimentService(session)
+    aggregation_service = AggregationService(session)
+
+    await query_service.mark_running(query_run)
+    await session.commit()
+
+    try:
+        posts, comments = await collector.collect(
+            term=term, subreddit_names=subreddit_names
+        )
+        persisted_documents: list[Document] = []
+        for post in posts:
+            doc = await _persist_post(
+                session, post,
+                query_run.language_filter,
+                language_service, search_service,
+            )
+            if doc:
+                persisted_documents.append(doc)
+        for comment in comments:
+            doc = await _persist_comment(
+                session, comment,
+                query_run.language_filter,
+                language_service, search_service,
+            )
+            if doc:
+                persisted_documents.append(doc)
+
+        matched_documents = []
+        for document in persisted_documents:
+            matched = await _match_document(
+                session, query_run, document,
+                search_service,
+            )
+            if matched:
+                matched_documents.append(document)
+
+        for document in matched_documents:
+            await sentiment_service.classify_document(
+                query_run, document,
+            )
+
+        await aggregation_service.build(query_run.id)
+        await query_service.mark_completed(query_run)
+        await session.commit()
+    except Exception as exc:
+        await session.rollback()
+        failed_run = await query_service.get_run(run_id)
+        if failed_run is not None:
+            await query_service.mark_failed(
+                failed_run, str(exc),
+            )
+            await session.commit()
+        raise
+\end{lstlisting}
+
+The pipeline follows a clear sequential flow: collect, persist, match, classify, aggregate. Each stage is handled by a dedicated service, and the pipeline function itself contains only orchestration logic. If any stage fails, the entire run is rolled back and marked as failed with the error message, enabling debugging from the dashboard.
+
+\section{Worker Process}
+\label{sec:worker_impl}
+
+The worker is a long-running process that polls PostgreSQL for pending query runs.
+
+\begin{lstlisting}[language=Python, caption={Worker main loop}]
+async def process_pending_runs(
+    poll_interval: int = 10,
+) -> None:
+    await initialize_database()
+    settings = get_settings()
+    await recover_stale_runs(
+        settings.query_run_stale_after_minutes,
+    )
+    while True:
+        processed_any = False
+        async with AsyncSessionLocal() as session:
+            query_service = QueryService(session)
+            while True:
+                run = await query_service\
+                    .claim_next_pending_run()
+                if run is None:
+                    break
+                processed_any = True
+                await session.commit()
+                query = await session.get(
+                    Query, run.query_id,
+                )
+                await run_query_pipeline(
+                    session=session,
+                    query_run=run,
+                    term=query.raw_term,
+                    subreddit_names=run.scope_config.get(
+                        "subreddits", []
+                    ),
+                )
+        if not processed_any:
+            await asyncio.sleep(poll_interval)
+\end{lstlisting}
+
+The \texttt{claim\_next\_pending\_run} method uses \texttt{SELECT ... FOR UPDATE SKIP LOCKED}, a PostgreSQL feature that atomically locks and claims a row while skipping rows already locked by other transactions. This enables safe concurrent processing if multiple worker instances are deployed, without requiring a separate message broker.
+
+At startup, the worker recovers stale runs --- query runs that have been in the ``running'' state for longer than the configured threshold. These are requeued to ``pending'' status, handling cases where the worker process crashed mid-execution.
+
+\section{API Layer}
+\label{sec:api_impl}
+
+The API is built with FastAPI and exposes RESTful endpoints for the dashboard to consume. The key endpoints are:
+
+\begin{itemize}
+    \item \texttt{POST /queries} --- Creates a new query and query run (or returns a cached recent run).
+    \item \texttt{GET /query-runs/\{run\_id\}} --- Returns the status and metadata of a query run.
+    \item \texttt{GET /query-runs/\{run\_id\}/charts} --- Returns the precomputed chart payloads.
+    \item \texttt{GET /query-runs/\{run\_id\}/documents} --- Returns matched documents with sentiment details.
+    \item \texttt{POST /query-runs/\{run\_id\}/refresh} --- Creates a fresh re-run for the same query.
+    \item \texttt{GET /ready} --- Health check endpoint.
+\end{itemize}
+
+The API uses Pydantic models for request validation and response serialization. Database sessions are managed through FastAPI's dependency injection, ensuring proper lifecycle management.
+
+\section{Interactive Dashboard}
+\label{sec:dashboard_impl}
+
+The dashboard is built with Plotly Dash and uses Tailwind CSS for styling. The layout is organized around a hero section containing the search interface and a tabbed content area with five tabs.
+
+\subsection{Layout Architecture}
+
+The layout uses Dash's component model, where the UI is expressed as a tree of Python objects. The \texttt{build\_app\_layout} function constructs the top-level structure, including several \texttt{dcc.Store} components that hold client-side state:
+
+\begin{itemize}
+    \item \texttt{theme-store} --- Persists the light/dark theme preference in local storage.
+    \item \texttt{language-store} --- Persists the UI language (English/Hungarian) in local storage.
+    \item \texttt{content-language-store} --- Holds the content language filter for the current session.
+    \item \texttt{subreddit-store} --- Holds the current subreddit scope for the session.
+    \item \texttt{query-run-store} --- Holds the active query run ID and status.
+    \item \texttt{history-store} --- Persists recent search history in local storage.
+    \item \texttt{poll-interval} --- A \texttt{dcc.Interval} component that triggers status polling every five seconds while a query is running.
+\end{itemize}
+
+\subsection{Callback Architecture}
+
+Dash uses a reactive callback model: when a user interacts with a component, a Python callback function is triggered on the server, and the returned values update designated output components. The dashboard organizes callbacks into four modules:
+
+\begin{enumerate}
+    \item \textbf{Query callbacks} handle search submission, polling for run completion, and search history management.
+    \item \textbf{Results callbacks} fetch chart data from the API and render the Plotly figures for each tab.
+    \item \textbf{Document callbacks} handle the matched content tab, including document listing and detail views.
+    \item \textbf{Theme and language callbacks} handle theme switching (light/dark) and UI language toggling, rebuilding affected components with the correct translations.
+\end{enumerate}
+
+\subsection{Internationalization}
+
+The dashboard supports English and Hungarian through a translation dictionary. All user-facing strings are retrieved through a \texttt{t(language, key)} function that looks up the translated text for the active language. This approach keeps the layout code language-agnostic and makes it straightforward to add new languages.
+
+\subsection{Theme Support}
+
+Light and dark themes are implemented through CSS class toggling. A client-side JavaScript callback (using Dash's \texttt{ClientsideFunction} mechanism) applies the theme class to the document body and updates chart colors accordingly. This ensures instant theme switching without server round-trips.
+
+\section{Deployment}
+\label{sec:deployment}
+
+The system is deployed using Docker Compose with four services. The Docker Compose configuration file defines the complete stack:
+
+\begin{lstlisting}[language=yaml, caption={Docker Compose service definitions}]
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: reddit_sentiment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL",
+        "pg_isready -U postgres -d reddit_sentiment"]
+      interval: 10s
+
+  api:
+    build: .
+    env_file: [.env]
+    depends_on:
+      db: {condition: service_healthy}
+    command: ["uvicorn",
+      "reddit_sentiment.api.main:app",
+      "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    env_file: [.env]
+    depends_on:
+      api: {condition: service_healthy}
+    command: ["gunicorn",
+      "reddit_sentiment.dashboard:server",
+      "--bind", "0.0.0.0:8050"]
+    ports: ["8050:8050"]
+    restart: unless-stopped
+
+  worker:
+    build: .
+    env_file: [.env]
+    depends_on:
+      db: {condition: service_healthy}
+      api: {condition: service_healthy}
+    command: ["python", "-m",
+      "reddit_sentiment.worker"]
+    restart: unless-stopped
+\end{lstlisting}
+
+Key deployment features:
+
+\begin{itemize}
+    \item \textbf{Health checks} ensure that services start in the correct order. The API waits for PostgreSQL to be ready, the dashboard waits for the API, and the worker waits for both the database and the API.
+    \item \textbf{Restart policies} (\texttt{unless-stopped}) ensure that services recover from transient failures.
+    \item \textbf{Environment files} (\texttt{.env}) externalize all configuration, including API keys, database credentials, and model selection.
+    \item \textbf{Database migrations} run automatically at API startup using Alembic with a PostgreSQL advisory lock, preventing race conditions when multiple services start simultaneously.
+\end{itemize}
+
+For local development, a shell script (\texttt{scripts/start-local-dev.sh}) starts only the database in Docker and runs the API, dashboard, and worker as local Python processes, enabling faster iteration with automatic code reloading.

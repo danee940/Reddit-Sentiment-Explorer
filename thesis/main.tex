@@ -1,0 +1,137 @@
+\documentclass[12pt]{report}
+
+\usepackage[language=english, type=bachelor]{style}
+\usepackage{enumitem}
+\usepackage{indentfirst}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Python code highlighting
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.95}
+\definecolor{codeblue}{rgb}{0.13,0.13,0.80}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{codegray},
+}
+
+\lstset{style=pythonstyle}
+
+\lstdefinelanguage{yaml}{
+    keywords={true,false,null,y,n},
+    sensitive=false,
+    comment=[l]{\#},
+    morestring=[b]',
+    morestring=[b]",
+}
+
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\setlength{\headheight}{14.5pt}
+\addtolength{\topmargin}{-2.5pt}
+\renewcommand{\headrulewidth}{0.2pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+\begin{document}
+
+% English title page
+\specialization{\\ Business Information Systems}
+\title{Reddit Sentiment Explorer: A Query-Driven Web Platform \\ for Analyzing Public Opinion Using Large Language Models}
+\author{Dániel AIERIZER}
+\supervisor{Associate Prof. Dénes CSALA, PhD}
+\maketitle
+
+% Romanian title page
+\setbool{@eng}{false}
+\specialization{\\Informatica Economică}
+\title{Reddit Sentiment Explorer: O Platformă Web Bazată pe Interogări pentru Analiza Opiniei Publice Folosind Modele Lingvistice de Mari Dimensiuni}
+\author{Dániel AIERIZER}
+\supervisor{Lect. univ. dr. Dénes CSALA}
+\maketitle
+
+% Hungarian title page
+\setbool{@hun}{true}
+\specialization{\\ Gazdaság Informatika}
+\title{Reddit Sentiment Explorer: Lekérdezés-alapú Webes Platform Közvélemény Elemzésére Nagy Nyelvi Modellek Segítségével}
+\author{Dániel AIERIZER}
+\supervisor{Dr. Dénes CSALA egyetemi adjunktus}
+\maketitle
+
+% Reset to English
+\setbool{@eng}{true}
+\setbool{@hun}{false}
+
+\newpage
+\pagenumbering{roman}
+
+\input{chapters/abstract}
+
+\tableofcontents
+\newpage
+
+\fontsize{14}{18} \textbf{Abbreviations}
+\begin{description}[align=left, labelwidth=2cm, leftmargin=!, itemsep=1.5pt]
+  \item[API] Application Programming Interface
+  \item[CRUD] Create, Read, Update, Delete
+  \item[CSS] Cascading Style Sheets
+  \item[ETL] Extract, Transform, Load
+  \item[HTML] HyperText Markup Language
+  \item[HTTP] Hypertext Transfer Protocol
+  \item[JSON] JavaScript Object Notation
+  \item[LLM] Large Language Model
+  \item[NLP] Natural Language Processing
+  \item[ORM] Object-Relational Mapping
+  \item[REST] Representational State Transfer
+  \item[SQL] Structured Query Language
+  \item[TTL] Time to Live
+  \item[UI] User Interface
+  \item[URL] Uniform Resource Locator
+  \item[UUID] Universally Unique Identifier
+  \item[UX] User Experience
+\end{description}
+
+\newpage
+\pagenumbering{arabic}
+
+\input{chapters/chapter1_introduction}
+\input{chapters/chapter2_literature_review}
+\input{chapters/chapter3_system_design}
+\input{chapters/chapter4_implementation}
+\input{chapters/chapter5_results}
+\input{chapters/chapter6_conclusions}
+
+\bibliography{references}
+
+\newpage
+\appendix
+\input{chapters/appendix}
+
+\end{document}

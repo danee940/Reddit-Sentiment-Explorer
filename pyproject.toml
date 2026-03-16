@@ -1,0 +1,80 @@
+[project]
+name = "reddit-sentiment"
+version = "0.1.0"
+description = "Query-driven multilingual Reddit sentiment analysis platform."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.14.1",
+  "asyncpg>=0.30.0",
+  "dash>=2.18.2",
+  "fastapi>=0.115.8",
+  "gunicorn>=23.0.0",
+  "httpx>=0.28.1",
+  "langdetect>=1.0.9",
+  "numpy>=2.2.3",
+  "orjson>=3.10.15",
+  "pandas>=2.2.3",
+  "plotly>=6.0.0",
+  "pydantic-settings>=2.7.1",
+  "python-dotenv>=1.0.1",
+  "python-multipart>=0.0.20",
+  "sqlalchemy>=2.0.37",
+  "tenacity>=9.0.0",
+  "uvicorn[standard]>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.13.0",
+  "pytest>=8.3.4",
+  "pytest-asyncio>=0.25.3",
+  "ruff>=0.9.7",
+]
+
+[build-system]
+requires = ["setuptools>=75.8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/reddit_sentiment/dashboard/charts.py" = ["E501"]
+"src/reddit_sentiment/dashboard/components/*.py" = ["E501"]
+"src/reddit_sentiment/dashboard/callbacks/*.py" = ["E501"]
+"src/reddit_sentiment/dashboard/translations.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["dash", "langdetect", "plotly", "plotly.express"]
+ignore_missing_imports = true
+
+[tool.pylint.messages_control]
+disable = [
+  "C0114",
+  "C0115",
+  "C0116",
+  "W0621",
+  "redefined-outer-name",
+]

@@ -1,0 +1,121 @@
+\chapter{Literature Review}
+\label{ch:literature_review}
+
+This chapter reviews the academic and technical literature that provides the foundation for Reddit Sentiment Explorer. I organize the review around four themes: sentiment analysis as a field, Reddit as a data source for opinion mining, large language models for text classification, and web application architectures for data-intensive systems. The chapter concludes with a synthesis of the identified gaps that motivate the design decisions in subsequent chapters.
+
+\section{Sentiment Analysis}
+\label{sec:sentiment_analysis}
+
+Sentiment analysis, also referred to as opinion mining, is the computational study of people's opinions, sentiments, and emotions expressed in text \cite{liu2012sentiment}. The field has grown significantly since the early work of \citeA{pang2002thumbs}, who demonstrated that machine learning classifiers could determine whether movie reviews were positive or negative with accuracy exceeding 80\%.
+
+\subsection{Approaches to Sentiment Analysis}
+
+Three broad approaches dominate the sentiment analysis literature: lexicon-based, machine learning, and deep learning methods.
+
+\textbf{Lexicon-based methods} rely on dictionaries of words annotated with sentiment polarity. VADER (Valence Aware Dictionary and sEntiment Reasoner) is one of the most widely used lexicon-based tools, specifically designed for social media text \cite{hutto2014vader}. VADER uses a combination of a sentiment lexicon and grammatical rules to handle features common in social media, such as capitalization for emphasis and emoticons. While lexicon-based methods are fast and require no training data, they struggle with context-dependent sentiment, sarcasm, and domain-specific vocabulary.
+
+\textbf{Machine learning methods} train classifiers on labeled datasets. \citeA{pang2002thumbs} compared Naive Bayes, maximum entropy, and support vector machine classifiers on movie review data. Support vector machines achieved the best performance in their experiments. Later work by \citeA{go2009twitter} applied similar techniques to Twitter data, using emoticons as distant supervision labels to create a large training set without manual annotation. The main limitation of traditional machine learning approaches is their dependence on feature engineering and domain-specific training data.
+
+\textbf{Deep learning methods} use neural network architectures that learn feature representations directly from text. \citeA{kim2014convolutional} showed that convolutional neural networks applied to pre-trained word embeddings achieve strong results on sentence-level sentiment classification. \citeA{devlin2019bert} introduced BERT (Bidirectional Encoder Representations from Transformers), a pre-trained language model that can be fine-tuned for sentiment analysis with relatively small labeled datasets. BERT and its variants set new state-of-the-art benchmarks across multiple sentiment analysis datasets.
+
+\subsection{Fine-Grained Sentiment Classification}
+
+Most early sentiment analysis work focused on binary classification (positive vs. negative). However, many applications require finer granularity. \citeA{socher2013recursive} introduced the Stanford Sentiment Treebank, which provides sentiment labels at five levels: very negative, negative, neutral, positive, and very positive. This five-class formulation captures the intensity of sentiment, not just its polarity.
+
+Fine-grained classification is more challenging than binary classification. \citeA{socher2013recursive} reported that their Recursive Neural Tensor Network achieved 45.7\% accuracy on five-class classification compared to 85.4\% on binary classification. The difficulty arises from the subtlety of distinguishing between adjacent classes such as ``negative'' and ``very negative,'' which often depends on nuanced contextual cues.
+
+Reddit Sentiment Explorer adopts the five-class sentiment scale because it provides richer information for exploratory analysis. Users can see not just whether a community is positive or negative about a topic, but how strongly those sentiments are expressed.
+
+\subsection{Challenges with Social Media Text}
+
+Social media text presents several challenges for sentiment analysis. \citeA{rosenthal2017semeval} summarized these challenges in the context of the SemEval shared tasks on sentiment analysis in Twitter: informal language, abbreviations, misspellings, sarcasm, mixed sentiments within a single post, and the use of hashtags and mentions as sentiment signals.
+
+\citeA{maynard2014challenges} specifically addressed the challenge of sarcasm detection, noting that sarcastic statements often express the opposite of their literal meaning. This is particularly relevant for Reddit, where sarcasm is a prevalent communication style in many communities.
+
+\section{Reddit as a Data Source}
+\label{sec:reddit_data_source}
+
+Reddit is a social news aggregation and discussion platform founded in 2005. As of 2024, it has over 50 million daily active users across more than 100,000 active communities \cite{reddit2024statistics}. Its structure of subreddits, posts (also called submissions), and nested comment threads makes it a rich source for opinion mining.
+
+\subsection{Structure and Content}
+
+Each subreddit functions as a self-moderated community focused on a specific topic. Posts can contain text, links, images, or videos, and each post generates a tree of nested comments. Both posts and comments receive upvotes and downvotes from community members, producing a score that reflects community reception. This voting mechanism provides an additional signal beyond the text content itself.
+
+Reddit content varies substantially across subreddits. Technical subreddits like r/programming tend to have formal, detailed discussions, while humor-oriented subreddits may contain mostly short, colloquial text. This diversity means that any analysis tool must handle a wide range of writing styles and levels of formality.
+
+\subsection{Data Access}
+
+Reddit's official API provides programmatic access to current content but imposes rate limits and does not provide historical data efficiently. To address this, \citeA{baumgartner2020pushshift} created the Pushshift archive, which provides bulk access to historical Reddit data going back to 2005. Pushshift has been widely used in academic research, with the dataset being cited in hundreds of studies.
+
+Following changes to Reddit's API policies in 2023, Pushshift access was restricted. The Arctic Shift project emerged as a community-maintained alternative, providing similar historical archive access through a publicly available API. Reddit Sentiment Explorer uses Arctic Shift as its data source, which provides access to both historical and recent posts and comments with flexible search parameters.
+
+\subsection{Reddit in Academic Research}
+
+Reddit data has been used extensively in sentiment analysis research. \citeA{medvedev2019analysis} analyzed sentiment across multiple subreddits to study how community norms affect the expression of opinions. \citeA{amaya2021sentiment} used Reddit data to track public sentiment during the COVID-19 pandemic, demonstrating the platform's value for real-time opinion monitoring.
+
+Beyond sentiment analysis, Reddit has been used for studies on political discourse \cite{soliman2019characterization}, mental health \cite{coppersmith2018natural}, and financial market prediction \cite{bollen2011twitter}. The breadth of these applications underscores Reddit's value as a general-purpose source of public opinion data.
+
+\section{Large Language Models for Text Classification}
+\label{sec:llm_classification}
+
+Large language models (LLMs) are neural network models trained on massive text corpora that can perform a wide range of natural language tasks. The transformer architecture introduced by \citeA{vaswani2017attention} forms the foundation of modern LLMs. This section reviews how LLMs have been applied to sentiment analysis and text classification.
+
+\subsection{From BERT to GPT}
+
+The development of LLMs followed two main trajectories. The first, exemplified by BERT \cite{devlin2019bert}, focuses on bidirectional encoder models that are pre-trained on masked language modeling and then fine-tuned on specific tasks. The second, exemplified by GPT (Generative Pre-trained Transformer), focuses on autoregressive decoder models that generate text left-to-right \cite{radford2019language}.
+
+\citeA{brown2020language} demonstrated with GPT-3 that sufficiently large autoregressive models can perform tasks through \emph{in-context learning}: given a natural language description of a task (a prompt) and optionally a few examples, the model can perform the task without any parameter updates. This capability, often called zero-shot or few-shot learning, eliminated the need for task-specific training data in many cases.
+
+\subsection{Prompt-Based Sentiment Classification}
+
+\citeA{zhong2023chatgpt} evaluated ChatGPT on multiple sentiment analysis benchmarks and found that while it did not surpass fine-tuned BERT models on standard datasets, it demonstrated strong performance on informal text and out-of-domain samples. This finding is particularly relevant for a general-purpose tool like Reddit Sentiment Explorer, where the topics and writing styles vary with every query.
+
+\citeA{wang2023chatgpt} conducted a comprehensive study of ChatGPT's performance across 18 NLP datasets, including several sentiment analysis benchmarks. They found that ChatGPT performed comparably to fine-tuned models on most tasks and excelled in cases requiring common-sense reasoning or understanding of implicit sentiment.
+
+A key advantage of prompt-based classification is that the model can provide explanations alongside its predictions. By instructing the model to include a rationale and evidence phrases in its output, the classification becomes interpretable. This is a significant advantage over traditional classifiers, which typically output only a label and a probability. Reddit Sentiment Explorer leverages this capability by requiring the LLM to return a rationale and evidence phrases with each classification.
+
+\subsection{Limitations of LLM-Based Classification}
+
+LLM-based classification has several limitations. First, it is significantly more expensive than traditional methods in terms of computational cost and API fees \cite{sun2023text}. Second, LLM outputs are non-deterministic: the same input text may receive different labels across multiple runs. Third, LLMs can exhibit biases inherited from their training data \cite{gallegos2024bias}. Finally, LLM-based classification has higher latency than local inference with smaller models, which affects the responsiveness of real-time applications.
+
+These limitations motivate the design decision in Reddit Sentiment Explorer to support multiple sentiment providers through an abstraction layer. The system includes both an OpenAI-based provider for production use and a heuristic mock provider for development and cost-free testing.
+
+\section{Web Application Architectures for Data-Intensive Systems}
+\label{sec:web_architectures}
+
+Reddit Sentiment Explorer is not only a sentiment analysis pipeline but also a web application that must handle asynchronous data processing, interactive visualization, and concurrent user requests. This section reviews relevant architectural patterns.
+
+\subsection{Asynchronous Task Processing}
+
+Data-intensive web applications often need to perform long-running computations that cannot be completed within the time frame of a single HTTP request. The standard solution is to dequeue work to a background worker process. \citeA{kleppmann2017designing} describes this pattern in the context of message brokers and task queues, where the API server enqueues a task and a separate worker process executes it.
+
+Reddit Sentiment Explorer uses a simplified version of this pattern. Instead of a dedicated message broker like RabbitMQ or Redis, the system uses the PostgreSQL database as the task queue. The worker polls for pending query runs using a \texttt{SELECT ... FOR UPDATE SKIP LOCKED} query, which provides transactional guarantees without additional infrastructure.
+
+\subsection{REST API Design}
+
+REST (Representational State Transfer) is the dominant architectural style for web APIs \cite{fielding2000architectural}. \citeA{masse2011rest} provides comprehensive guidelines for RESTful API design, including resource naming conventions, HTTP method semantics, and response formatting.
+
+FastAPI, the framework used in this project, is a modern Python web framework that generates OpenAPI documentation automatically from type annotations \cite{ramirez2018fastapi}. It uses Python's \texttt{async/await} syntax for asynchronous request handling, which is particularly suitable for I/O-bound applications that interact with databases and external APIs.
+
+\subsection{Interactive Data Visualization}
+
+Interactive visualization is essential for exploratory data analysis. \citeA{shneiderman1996eyes} formulated the ``Visual Information Seeking Mantra'': overview first, zoom and filter, then details on demand. This principle guides the design of Reddit Sentiment Explorer's dashboard, which presents overview metrics first and allows users to drill down into specific time periods, subreddits, and individual documents.
+
+Plotly Dash is a Python framework for building interactive web applications with data visualization capabilities \cite{plotly2020dash}. It uses a reactive programming model where user interactions trigger callback functions that update the displayed data. This model aligns well with the exploratory nature of sentiment analysis, where users iteratively refine their view of the results.
+
+\section{Synthesis and Identified Gaps}
+\label{sec:synthesis}
+
+The literature review reveals several gaps that Reddit Sentiment Explorer addresses:
+
+\begin{enumerate}
+    \item \textbf{Fragmented tooling.} Existing sentiment analysis tools for Reddit require researchers to assemble separate components for data collection, classification, and visualization. There is no open-source, integrated platform that handles the entire workflow from search term to interactive dashboard.
+
+    \item \textbf{Rigid topic scope.} Most academic studies analyze fixed datasets on predetermined topics. There is a need for a query-driven tool that allows users to explore sentiment for any term on demand.
+
+    \item \textbf{Limited interpretability.} Traditional sentiment classifiers output a label and a confidence score but do not explain their reasoning. LLMs can provide rationale and evidence, but this capability is not commonly integrated into end-user tools.
+
+    \item \textbf{Language inflexibility.} Many existing tools are limited to English text. Reddit contains substantial content in other languages, and a practical tool should support multilingual content through language filtering and language-aware classification.
+\end{enumerate}
+
+The subsequent chapters describe how Reddit Sentiment Explorer addresses these gaps through its architecture and implementation.

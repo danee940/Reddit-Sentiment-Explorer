@@ -1,0 +1,67 @@
+\chapter{Conclusions}
+\label{ch:conclusions}
+
+This chapter summarizes the contributions of the thesis, discusses the limitations of the current implementation, and outlines directions for future work.
+
+\section{Summary}
+\label{sec:summary}
+
+In this thesis, I designed and implemented Reddit Sentiment Explorer, a query-driven web platform for analyzing public opinion on Reddit using large language models. The system enables users to enter any search term, select target subreddits and a content language, and receive comprehensive sentiment analysis results through an interactive dashboard.
+
+The platform addresses the gap between ad-hoc sentiment analysis scripts and commercial social listening platforms by providing an integrated, open-source tool that handles the complete workflow from data collection to interactive visualization. The key contributions are:
+
+\begin{enumerate}
+    \item \textbf{A modular, four-service architecture} that cleanly separates the API, worker, dashboard, and database concerns. This architecture enables independent development and deployment of each component, and the pipeline design (collect, persist, match, filter, classify, aggregate) provides clear extension points for future enhancements.
+
+    \item \textbf{A provider-agnostic sentiment classification layer} that abstracts the classification interface behind a Python protocol. This enables swapping between an OpenAI-based provider for production use and a heuristic mock provider for development, and can accommodate new providers (such as open-source models) without changes to the rest of the system.
+
+    \item \textbf{Interpretable sentiment classification} that goes beyond labels and confidence scores. By leveraging the language generation capabilities of large language models, each classification includes a rationale and evidence phrases, making the results transparent and verifiable by the end user.
+
+    \item \textbf{A document abstraction layer} that normalizes Reddit posts and comments into a common representation. This simplifies the matching, classification, and aggregation logic and makes the pipeline agnostic to the underlying content type.
+
+    \item \textbf{An interactive dashboard} with nine types of aggregated visualizations (overview, distribution, timelines, heatmaps, breakdowns, spike detection), multilingual UI support (English and Hungarian), and light/dark themes. The dashboard follows the Visual Information Seeking Mantra, providing overview first, then zoom and filter, then details on demand.
+\end{enumerate}
+
+The evaluation demonstrates that the OpenAI provider produces contextually appropriate, multilingual sentiment classifications on informal Reddit text, with interpretable output that traditional classifiers do not provide. The system successfully answers both research questions posed in Chapter~\ref{ch:introduction}.
+
+\section{Limitations}
+\label{sec:limitations}
+
+Several limitations should be acknowledged:
+
+\begin{enumerate}
+    \item \textbf{Data freshness.} The Arctic Shift archive provides historical Reddit data but may not include the most recent posts and comments. This means the platform is better suited for retrospective analysis than real-time monitoring.
+
+    \item \textbf{Classification cost and latency.} The OpenAI provider requires a paid API key and processes documents sequentially, resulting in execution times of 1--3 minutes for queries with many matched documents. This limits the platform's suitability for high-volume or time-sensitive use cases.
+
+    \item \textbf{Single-worker throughput.} The current architecture uses a single worker process. While the \texttt{FOR UPDATE SKIP LOCKED} pattern supports multiple concurrent workers, horizontal scaling has not been tested.
+
+    \item \textbf{Non-deterministic classification.} Large language model outputs are inherently non-deterministic. The same document may receive different labels across separate classification runs, which can affect the reproducibility of aggregate statistics.
+
+    \item \textbf{Limited evaluation scope.} The sentiment classification quality was evaluated through qualitative inspection rather than a formal evaluation against a labeled dataset. Constructing a gold-standard dataset for fine-grained, multilingual Reddit sentiment classification was beyond the scope of this thesis.
+
+    \item \textbf{Language detection accuracy.} The \texttt{langdetect} library performs well on longer texts but is less reliable on short Reddit comments (one or two sentences), which can lead to both false positives and false negatives in language filtering.
+\end{enumerate}
+
+\section{Future Work}
+\label{sec:future_work}
+
+Several directions could extend the platform:
+
+\begin{enumerate}
+    \item \textbf{Multi-provider sentiment ensemble.} Running multiple providers (e.g., OpenAI, a fine-tuned BERT model, and a lexicon-based approach) and aggregating their predictions could improve both accuracy and robustness while providing a confidence measure based on inter-provider agreement.
+
+    \item \textbf{Real-time streaming.} Integrating with Reddit's real-time data sources or more frequently updated archives would enable monitoring of emerging discussions as they happen.
+
+    \item \textbf{Concurrent classification.} Processing documents in parallel (batched API calls or concurrent workers) would significantly reduce pipeline execution time for large queries.
+
+    \item \textbf{Open-source model support.} Adding providers for locally hosted models (e.g., Llama, Mistral) would eliminate API costs and provide full data privacy, which is important for sensitive analysis topics.
+
+    \item \textbf{Broader platform support.} Extending the collector abstraction to support additional platforms (Twitter/X, HackerNews, news websites) would make the tool applicable to cross-platform sentiment analysis.
+
+    \item \textbf{User accounts and saved queries.} Adding authentication and persistent user profiles would enable saved query histories, scheduled recurring analyses, and collaborative use.
+
+    \item \textbf{Formal evaluation framework.} Building a labeled evaluation dataset of Reddit content across multiple languages and domains would enable rigorous quantitative comparison of sentiment providers.
+\end{enumerate}
+
+Reddit Sentiment Explorer demonstrates that combining modern web technologies with large language model capabilities produces a practical tool for exploratory sentiment analysis. The modular architecture and provider abstraction ensure that as both web technologies and language models continue to evolve, the platform can adapt without fundamental restructuring.

@@ -1,0 +1,62 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+Every day, millions of users share opinions on Reddit across more than 100,000 active communities. These communities, called subreddits, cover virtually every topic imaginable, from technology and finance to food and local culture. For researchers, marketers, and curious individuals, this represents an enormous source of public opinion data. However, extracting structured sentiment insights from Reddit is far from straightforward. The text is informal, multilingual, rich in sarcasm, and spread across thousands of threads. Manual reading does not scale, and existing tools are either narrowly scoped academic scripts or expensive commercial platforms with rigid interfaces.
+
+In this thesis, I present Reddit Sentiment Explorer, a query-driven web platform that allows any user to type a search term, select target subreddits and a content language, and receive a comprehensive sentiment analysis complete with interactive charts, timelines, and access to the original matched documents. The system leverages a large language model to classify each matched piece of content on a five-point sentiment scale, producing not just a label but also a confidence score, a rationale, and evidence phrases quoted directly from the source text.
+
+\section{Motivation and Background}
+\label{sec:motivation}
+
+Sentiment analysis is one of the most widely studied tasks in natural language processing. Organizations use it to understand customer feedback, track brand perception, and monitor public discourse around events or policies \cite{liu2012sentiment}. Social media platforms are particularly attractive targets because they capture unfiltered, real-time public opinion from diverse populations.
+
+Reddit stands out among social media platforms for several reasons. First, its community-based structure means that discussions are organized by topic, making it possible to target specific interest groups. Second, Reddit users tend to write longer, more detailed posts compared to platforms like Twitter, which historically imposed a 280-character limit. Third, Reddit data has been extensively used in academic research, with the Pushshift archive providing historical access to billions of posts and comments \cite{baumgartner2020pushshift}.
+
+Despite these advantages, performing sentiment analysis on Reddit remains a manual, fragmented process for most practitioners. A researcher interested in how people feel about a specific product, policy, or cultural phenomenon must write custom scraping code, apply a classification model, and build their own visualizations. There is no widely available, open-source tool that combines all of these steps into a single, interactive experience. This gap is what Reddit Sentiment Explorer addresses.
+
+The emergence of large language models such as GPT-4 has opened new possibilities for text classification \cite{brown2020language}. Unlike traditional machine learning models that require labeled training data for each specific task, large language models can classify text in a zero-shot or few-shot manner through prompt engineering. This makes them particularly suitable for a general-purpose sentiment analysis tool where the search terms and topics change with every query.
+
+\section{Research Questions}
+\label{sec:research_questions}
+
+This thesis addresses two research questions:
+
+\begin{enumerate}
+    \item \textbf{How can a modular, query-driven system be designed to collect, filter, and classify Reddit content by sentiment for arbitrary user-defined search terms?}
+
+    This question concerns the system architecture and pipeline design. It asks how the various concerns of data collection, text matching, language filtering, sentiment classification, and result aggregation can be separated into distinct, maintainable components while still producing a cohesive user experience.
+
+    \item \textbf{How effectively can large language models classify sentiment in informal, multilingual social media text compared to simpler heuristic approaches?}
+
+    This question concerns the quality of the sentiment classification. It asks whether prompting a large language model produces meaningful, interpretable results on the kind of text found on Reddit, and how these results compare to a baseline heuristic provider.
+\end{enumerate}
+
+\section{Methodology}
+\label{sec:methodology}
+
+I follow a software engineering methodology that consists of four phases:
+
+\begin{enumerate}
+    \item \textbf{Requirements analysis.} I identify the functional and non-functional requirements for the platform based on the use case of ad-hoc sentiment exploration of Reddit content.
+
+    \item \textbf{Architecture design.} I design a four-service architecture consisting of a REST API, an asynchronous background worker, an interactive dashboard, and a PostgreSQL database. I define the data model, the query pipeline, and the sentiment provider abstraction.
+
+    \item \textbf{Implementation.} I implement the system in Python using FastAPI for the API, Plotly Dash for the dashboard, SQLAlchemy for database access, and the OpenAI API for sentiment classification. The system is containerized with Docker Compose.
+
+    \item \textbf{Evaluation.} I evaluate the system through a complete demonstration walkthrough and a discussion of the sentiment classification quality, comparing the large language model provider against a heuristic mock provider.
+\end{enumerate}
+
+\section{Thesis Structure}
+\label{sec:thesis_structure}
+
+The remainder of this thesis is organized as follows:
+
+\textbf{Chapter~\ref{ch:literature_review}} reviews the relevant literature across four themes: sentiment analysis techniques, Reddit as a data source, large language models for text classification, and web application architectures for data-intensive systems.
+
+\textbf{Chapter~\ref{ch:system_design}} presents the system design, including the requirements analysis, the high-level architecture, the data model, the query pipeline, and the sentiment classification strategy.
+
+\textbf{Chapter~\ref{ch:implementation}} describes the implementation in detail, covering the technology stack, data collection, text matching, sentiment classification, aggregation, the API and worker, the interactive dashboard, and the deployment setup.
+
+\textbf{Chapter~\ref{ch:results}} demonstrates the system through a walkthrough of a complete query lifecycle and discusses the sentiment classification quality and system performance.
+
+\textbf{Chapter~\ref{ch:conclusions}} summarizes the contributions, discusses limitations, and outlines directions for future work.
