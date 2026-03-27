@@ -20,7 +20,9 @@ Amaya-Cruz, A.%
 \newblock
 \APACrefYearMonthDay{2021}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Sentiment Analysis of {COVID}-19 Tweets Using Deep Learning and Lexicon-Based Approaches} {Sentiment analysis of {COVID}-19 tweets using deep learning and lexicon-based approaches}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Sentiment Analysis of {COVID}-19 Tweets Using Deep
+  Learning and Lexicon-Based Approaches} {Sentiment analysis of {COVID}-19
+  tweets using deep learning and lexicon-based approaches}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{Sustainability}{13}{3}{1592}.
 \PrintBackRefs{\CurrentBib}
@@ -50,9 +52,11 @@ Baumgartner, J.%
 \newblock
 \APACrefYearMonthDay{2020}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {The {Pushshift Reddit} Dataset} {The {Pushshift Reddit} dataset}.{\BBCQ}
+{\BBOQ}\APACrefatitle {The {Pushshift Reddit} Dataset} {The {Pushshift Reddit}
+  dataset}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Proceedings of the International AAAI Conference on Web and Social Media}{14}{}{830--839}.
+\APACjournalVolNumPages{Proceedings of the International AAAI Conference on Web
+  and Social Media}{14}{}{830--839}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -76,7 +80,8 @@ Bollen, J.%
 \newblock
 \APACrefYearMonthDay{2011}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Twitter Mood Predicts the Stock Market} {Twitter mood predicts the stock market}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Twitter Mood Predicts the Stock Market} {Twitter mood
+  predicts the stock market}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{Journal of Computational Science}{2}{1}{1--8}.
 \PrintBackRefs{\CurrentBib}
@@ -104,9 +109,39 @@ Brown, T.%
 \newblock
 \APACrefYearMonthDay{2020}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Language Models Are Few-Shot Learners} {Language models are few-shot learners}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Language Models Are Few-Shot Learners} {Language models
+  are few-shot learners}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Advances in Neural Information Processing Systems}{33}{}{1877--1901}.
+\APACjournalVolNumPages{Advances in Neural Information Processing
+  Systems}{33}{}{1877--1901}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Cockburn%
+, Karlson%
+\BCBL {}\ \BBA {} Bederson%
+}{%
+Cockburn%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2008}}%
+}]{%
+cockburn2008overview}
+\APACinsertmetastar {%
+cockburn2008overview}%
+\begin{APACrefauthors}%
+Cockburn, A.%
+, Karlson, A.%
+\BCBL {}\ \BBA {} Bederson, B\BPBI B.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2008}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A Review of Overview+Detail, Zooming, and Focus+Context
+  Interfaces} {A review of overview+detail, zooming, and focus+context
+  interfaces}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{ACM Computing Surveys}{41}{1}{1--31}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -132,7 +167,9 @@ Coppersmith, G.%
 \newblock
 \APACrefYearMonthDay{2018}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Natural Language Processing of Social Media as Screening for Suicide Risk} {Natural language processing of social media as screening for suicide risk}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Natural Language Processing of Social Media as Screening
+  for Suicide Risk} {Natural language processing of social media as screening
+  for suicide risk}.{\BBCQ}
 \newblock
 \BIn{} (\BVOL~10).
 \PrintBackRefs{\CurrentBib}
@@ -160,9 +197,13 @@ Devlin, J.%
 \newblock
 \APACrefYearMonthDay{2019}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {{BERT}: Pre-training of Deep Bidirectional Transformers for Language Understanding} {{BERT}: Pre-training of deep bidirectional transformers for language understanding}.{\BBCQ}
+{\BBOQ}\APACrefatitle {{BERT}: Pre-training of Deep Bidirectional Transformers
+  for Language Understanding} {{BERT}: Pre-training of deep bidirectional
+  transformers for language understanding}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics}{}{}{4171--4186}.
+\APACjournalVolNumPages{Proceedings of the 2019 Conference of the North
+  American Chapter of the Association for Computational
+  Linguistics}{}{}{4171--4186}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -183,7 +224,9 @@ Fielding, R\BPBI T.%
 \APACrefYear{2000}.
 \unskip\
 \newblock
-\APACrefbtitle {Architectural Styles and the Design of Network-Based Software Architectures} {Architectural styles and the design of network-based software architectures}\ \APACtypeAddressSchool {\BUPhD}{}{}.
+\APACrefbtitle {Architectural Styles and the Design of Network-Based Software
+  Architectures} {Architectural styles and the design of network-based software
+  architectures}\ \APACtypeAddressSchool {\BUPhD}{}{}.
 \unskip\
 \newblock
 \APACaddressSchool {}{University of California, Irvine}.
@@ -212,7 +255,8 @@ Gallegos, I\BPBI O.%
 \newblock
 \APACrefYearMonthDay{2024}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Bias and Fairness in Large Language Models: A Survey} {Bias and fairness in large language models: A survey}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Bias and Fairness in Large Language Models: A Survey}
+  {Bias and fairness in large language models: A survey}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{Computational Linguistics}{50}{3}{1097--1179}.
 \PrintBackRefs{\CurrentBib}
@@ -238,9 +282,12 @@ Go, A.%
 \newblock
 \APACrefYearMonthDay{2009}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Twitter Sentiment Classification using Distant Supervision} {Twitter sentiment classification using distant supervision}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Twitter Sentiment Classification using Distant
+  Supervision} {Twitter sentiment classification using distant
+  supervision}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {CS224N Project Report, Stanford.} {Cs224n project report, stanford.}
+\BIn{} \APACrefbtitle {CS224N Project Report, Stanford.} {Cs224n project
+  report, stanford.}
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -263,9 +310,12 @@ Hutto, C\BPBI J.%
 \newblock
 \APACrefYearMonthDay{2014}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {{VADER}: A Parsimonious Rule-Based Model for Sentiment Analysis of Social Media Text} {{VADER}: A parsimonious rule-based model for sentiment analysis of social media text}.{\BBCQ}
+{\BBOQ}\APACrefatitle {{VADER}: A Parsimonious Rule-Based Model for Sentiment
+  Analysis of Social Media Text} {{VADER}: A parsimonious rule-based model for
+  sentiment analysis of social media text}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Proceedings of the International AAAI Conference on Web and Social Media}{8}{1}{216--225}.
+\APACjournalVolNumPages{Proceedings of the International AAAI Conference on Web
+  and Social Media}{8}{1}{216--225}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -285,9 +335,14 @@ Kim, Y.%
 \newblock
 \APACrefYearMonthDay{2014}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Convolutional Neural Networks for Sentence Classification} {Convolutional neural networks for sentence classification}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Convolutional Neural Networks for Sentence
+  Classification} {Convolutional neural networks for sentence
+  classification}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)} {Proceedings of the 2014 conference on empirical methods in natural language processing (emnlp)}\ (\BPGS\ 1746--1751).
+\BIn{} \APACrefbtitle {Proceedings of the 2014 Conference on Empirical Methods
+  in Natural Language Processing (EMNLP)} {Proceedings of the 2014 conference
+  on empirical methods in natural language processing (emnlp)}\ (\BPGS\
+  1746--1751).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -307,7 +362,8 @@ Kleppmann, M.%
 \newblock
 \APACrefYear{2017}.
 \newblock
-\APACrefbtitle {Designing Data-Intensive Applications} {Designing data-intensive applications}.
+\APACrefbtitle {Designing Data-Intensive Applications} {Designing
+  data-intensive applications}.
 \newblock
 \APACaddressPublisher{}{O'Reilly Media}.
 \PrintBackRefs{\CurrentBib}
@@ -329,7 +385,8 @@ Liu, B.%
 \newblock
 \APACrefYear{2012}.
 \newblock
-\APACrefbtitle {Sentiment Analysis and Opinion Mining} {Sentiment analysis and opinion mining}.
+\APACrefbtitle {Sentiment Analysis and Opinion Mining} {Sentiment analysis and
+  opinion mining}.
 \newblock
 \APACaddressPublisher{}{Morgan \& Claypool Publishers}.
 \PrintBackRefs{\CurrentBib}
@@ -376,9 +433,14 @@ Maynard, D.%
 \newblock
 \APACrefYearMonthDay{2014}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Who Cares about Sarcastic Tweets? Investigating the Impact of Sarcasm on Sentiment Analysis} {Who cares about sarcastic tweets? investigating the impact of sarcasm on sentiment analysis}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Who Cares about Sarcastic Tweets? Investigating the
+  Impact of Sarcasm on Sentiment Analysis} {Who cares about sarcastic tweets?
+  investigating the impact of sarcasm on sentiment analysis}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the Ninth International Conference on Language Resources and Evaluation (LREC'14)} {Proceedings of the ninth international conference on language resources and evaluation (lrec'14)}\ (\BPGS\ 4238--4243).
+\BIn{} \APACrefbtitle {Proceedings of the Ninth International Conference on
+  Language Resources and Evaluation (LREC'14)} {Proceedings of the ninth
+  international conference on language resources and evaluation (lrec'14)}\
+  (\BPGS\ 4238--4243).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -402,7 +464,8 @@ Medvedev, A\BPBI N.%
 \newblock
 \APACrefYearMonthDay{2019}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {The Anatomy of {Reddit}: An Overview of Academic Research} {The anatomy of {Reddit}: An overview of academic research}.{\BBCQ}
+{\BBOQ}\APACrefatitle {The Anatomy of {Reddit}: An Overview of Academic
+  Research} {The anatomy of {Reddit}: An overview of academic research}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{Dynamics On and Of Complex Networks III}{}{}{183--204}.
 \PrintBackRefs{\CurrentBib}
@@ -428,9 +491,13 @@ Pang, B.%
 \newblock
 \APACrefYearMonthDay{2002}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Thumbs up? Sentiment Classification using Machine Learning Techniques} {Thumbs up? sentiment classification using machine learning techniques}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Thumbs up? Sentiment Classification using Machine
+  Learning Techniques} {Thumbs up? sentiment classification using machine
+  learning techniques}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the ACL-02 Conference on Empirical Methods in Natural Language Processing} {Proceedings of the acl-02 conference on empirical methods in natural language processing}\ (\BPGS\ 79--86).
+\BIn{} \APACrefbtitle {Proceedings of the ACL-02 Conference on Empirical
+  Methods in Natural Language Processing} {Proceedings of the acl-02 conference
+  on empirical methods in natural language processing}\ (\BPGS\ 79--86).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -450,7 +517,9 @@ plotly2020dash}%
 \newblock
 \APACrefYearMonthDay{2020}{}{}.
 \newblock
-\APACrefbtitle {Dash: {Python} Framework for Building Analytical Web Applications.} {Dash: {Python} framework for building analytical web applications.}
+\APACrefbtitle {Dash: {Python} Framework for Building Analytical Web
+  Applications.} {Dash: {Python} framework for building analytical web
+  applications.}
 \newblock
 \APAChowpublished {\url{https://dash.plotly.com/}}.
 \newblock
@@ -479,7 +548,8 @@ Radford, A.%
 \newblock
 \APACrefYearMonthDay{2019}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Language Models Are Unsupervised Multitask Learners} {Language models are unsupervised multitask learners}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Language Models Are Unsupervised Multitask Learners}
+  {Language models are unsupervised multitask learners}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{OpenAI Blog}{}{}{}.
 \PrintBackRefs{\CurrentBib}
@@ -501,7 +571,9 @@ Ram{\'i}rez, S.%
 \newblock
 \APACrefYearMonthDay{2018}{}{}.
 \newblock
-\APACrefbtitle {{FastAPI}: Modern, Fast (High-Performance), Web Framework for Building {APIs} with {Python} 3.6+.} {{FastAPI}: Modern, fast (high-performance), web framework for building {APIs} with {Python} 3.6+.}
+\APACrefbtitle {{FastAPI}: Modern, Fast (High-Performance), Web Framework for
+  Building {APIs} with {Python} 3.6+.} {{FastAPI}: Modern, fast
+  (high-performance), web framework for building {APIs} with {Python} 3.6+.}
 \newblock
 \APAChowpublished {\url{https://fastapi.tiangolo.com/}}.
 \newblock
@@ -553,31 +625,12 @@ Rosenthal, S.%
 \newblock
 \APACrefYearMonthDay{2017}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {{SemEval}-2017 Task 4: Sentiment Analysis in {Twitter}} {{SemEval}-2017 task 4: Sentiment analysis in {Twitter}}.{\BBCQ}
+{\BBOQ}\APACrefatitle {{SemEval}-2017 Task 4: Sentiment Analysis in {Twitter}}
+  {{SemEval}-2017 task 4: Sentiment analysis in {Twitter}}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the 11th International Workshop on Semantic Evaluation (SemEval-2017)} {Proceedings of the 11th international workshop on semantic evaluation (semeval-2017)}\ (\BPGS\ 502--518).
-\PrintBackRefs{\CurrentBib}
-
-\bibitem [\protect \citeauthoryear {%
-Shneiderman%
-}{%
-Shneiderman%
-}{%
-{\protect \APACyear {1996}}%
-}]{%
-shneiderman1996eyes}
-\APACinsertmetastar {%
-shneiderman1996eyes}%
-\begin{APACrefauthors}%
-Shneiderman, B.%
-\end{APACrefauthors}%
-\unskip\
-\newblock
-\APACrefYearMonthDay{1996}{}{}.
-\newblock
-{\BBOQ}\APACrefatitle {The Eyes Have It: A Task by Data Type Taxonomy for Information Visualizations} {The eyes have it: A task by data type taxonomy for information visualizations}.{\BBCQ}
-\newblock
-\BIn{} \APACrefbtitle {Proceedings of the 1996 IEEE Symposium on Visual Languages} {Proceedings of the 1996 ieee symposium on visual languages}\ (\BPGS\ 336--343).
+\BIn{} \APACrefbtitle {Proceedings of the 11th International Workshop on
+  Semantic Evaluation (SemEval-2017)} {Proceedings of the 11th international
+  workshop on semantic evaluation (semeval-2017)}\ (\BPGS\ 502--518).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -603,9 +656,13 @@ Socher, R.%
 \newblock
 \APACrefYearMonthDay{2013}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank} {Recursive deep models for semantic compositionality over a sentiment treebank}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Recursive Deep Models for Semantic Compositionality Over
+  a Sentiment Treebank} {Recursive deep models for semantic compositionality
+  over a sentiment treebank}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing} {Proceedings of the 2013 conference on empirical methods in natural language processing}\ (\BPGS\ 1631--1642).
+\BIn{} \APACrefbtitle {Proceedings of the 2013 Conference on Empirical Methods
+  in Natural Language Processing} {Proceedings of the 2013 conference on
+  empirical methods in natural language processing}\ (\BPGS\ 1631--1642).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -629,9 +686,12 @@ Soliman, A.%
 \newblock
 \APACrefYearMonthDay{2019}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {A Characterization of Political Communities on {Reddit}} {A characterization of political communities on {Reddit}}.{\BBCQ}
+{\BBOQ}\APACrefatitle {A Characterization of Political Communities on {Reddit}}
+  {A characterization of political communities on {Reddit}}.{\BBCQ}
 \newblock
-\BIn{} \APACrefbtitle {Proceedings of the 30th ACM Conference on Hypertext and Social Media} {Proceedings of the 30th acm conference on hypertext and social media}\ (\BPGS\ 259--263).
+\BIn{} \APACrefbtitle {Proceedings of the 30th ACM Conference on Hypertext and
+  Social Media} {Proceedings of the 30th acm conference on hypertext and social
+  media}\ (\BPGS\ 259--263).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -657,9 +717,11 @@ Sun, X.%
 \newblock
 \APACrefYearMonthDay{2023}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Text Classification via Large Language Models} {Text classification via large language models}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Text Classification via Large Language Models} {Text
+  classification via large language models}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Findings of the Association for Computational Linguistics: EMNLP 2023}{}{}{8990--9005}.
+\APACjournalVolNumPages{Findings of the Association for Computational
+  Linguistics: EMNLP 2023}{}{}{8990--9005}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -685,9 +747,11 @@ Vaswani, A.%
 \newblock
 \APACrefYearMonthDay{2017}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Attention Is All You Need} {Attention is all you need}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Attention Is All You Need} {Attention is all you
+  need}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{Advances in Neural Information Processing Systems}{30}{}{}.
+\APACjournalVolNumPages{Advances in Neural Information Processing
+  Systems}{30}{}{}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -712,7 +776,8 @@ Wang, J.%
 \newblock
 \APACrefYearMonthDay{2023}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Is {ChatGPT} a Good {NLP} Tool? A Preliminary Study} {Is {ChatGPT} a good {NLP} tool? a preliminary study}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Is {ChatGPT} a Good {NLP} Tool? A Preliminary Study} {Is
+  {ChatGPT} a good {NLP} tool? a preliminary study}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{arXiv preprint arXiv:2303.16634}{}{}{}.
 \PrintBackRefs{\CurrentBib}
@@ -742,7 +807,9 @@ Zhong, Q.%
 \newblock
 \APACrefYearMonthDay{2023}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Can {ChatGPT} Understand Too? A Comparative Study on {ChatGPT} and Fine-tuned {BERT}} {Can {ChatGPT} understand too? a comparative study on {ChatGPT} and fine-tuned {BERT}}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Can {ChatGPT} Understand Too? A Comparative Study on
+  {ChatGPT} and Fine-tuned {BERT}} {Can {ChatGPT} understand too? a comparative
+  study on {ChatGPT} and fine-tuned {BERT}}.{\BBCQ}
 \newblock
 \APACjournalVolNumPages{arXiv preprint arXiv:2302.10198}{}{}{}.
 \PrintBackRefs{\CurrentBib}

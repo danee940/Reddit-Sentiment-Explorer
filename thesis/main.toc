@@ -45,38 +45,38 @@
 \contentsline {section}{\numberline {4.3}Text Matching}{23}{section.4.3}%
 \contentsline {section}{\numberline {4.4}Language Filtering}{24}{section.4.4}%
 \contentsline {section}{\numberline {4.5}Sentiment Classification}{25}{section.4.5}%
-\contentsline {subsection}{\numberline {4.5.1}OpenAI Provider}{25}{subsection.4.5.1}%
+\contentsline {subsection}{\numberline {4.5.1}OpenAI Provider}{26}{subsection.4.5.1}%
 \contentsline {subsection}{\numberline {4.5.2}Mock Provider}{28}{subsection.4.5.2}%
 \contentsline {section}{\numberline {4.6}Query Pipeline Orchestration}{28}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Worker Process}{29}{section.4.7}%
-\contentsline {section}{\numberline {4.8}API Layer}{30}{section.4.8}%
-\contentsline {section}{\numberline {4.9}Interactive Dashboard}{31}{section.4.9}%
-\contentsline {subsection}{\numberline {4.9.1}Layout Architecture}{31}{subsection.4.9.1}%
-\contentsline {subsection}{\numberline {4.9.2}Callback Architecture}{32}{subsection.4.9.2}%
-\contentsline {subsection}{\numberline {4.9.3}Internationalization}{32}{subsection.4.9.3}%
-\contentsline {subsection}{\numberline {4.9.4}Theme Support}{32}{subsection.4.9.4}%
+\contentsline {section}{\numberline {4.7}Worker Process}{30}{section.4.7}%
+\contentsline {section}{\numberline {4.8}API Layer}{31}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Interactive Dashboard}{32}{section.4.9}%
+\contentsline {subsection}{\numberline {4.9.1}Layout Architecture}{32}{subsection.4.9.1}%
+\contentsline {subsection}{\numberline {4.9.2}Callback Architecture}{33}{subsection.4.9.2}%
+\contentsline {subsection}{\numberline {4.9.3}Internationalization}{33}{subsection.4.9.3}%
+\contentsline {subsection}{\numberline {4.9.4}Theme Support}{33}{subsection.4.9.4}%
 \contentsline {section}{\numberline {4.10}Deployment}{33}{section.4.10}%
-\contentsline {chapter}{\numberline {5}Results and Evaluation}{35}{chapter.5}%
-\contentsline {section}{\numberline {5.1}System Demonstration}{35}{section.5.1}%
-\contentsline {subsection}{\numberline {5.1.1}Dashboard Landing Page}{35}{subsection.5.1.1}%
-\contentsline {subsection}{\numberline {5.1.2}Search Execution}{36}{subsection.5.1.2}%
-\contentsline {subsection}{\numberline {5.1.3}Search Overview Tab}{36}{subsection.5.1.3}%
-\contentsline {subsection}{\numberline {5.1.4}Sentiment Trends Tab}{37}{subsection.5.1.4}%
-\contentsline {subsection}{\numberline {5.1.5}Subreddit Breakdown Tab}{39}{subsection.5.1.5}%
-\contentsline {subsection}{\numberline {5.1.6}Matched Content Explorer}{40}{subsection.5.1.6}%
-\contentsline {section}{\numberline {5.2}Sentiment Classification Quality}{43}{section.5.2}%
-\contentsline {subsection}{\numberline {5.2.1}OpenAI Provider Strengths}{43}{subsection.5.2.1}%
-\contentsline {subsection}{\numberline {5.2.2}OpenAI Provider Limitations}{43}{subsection.5.2.2}%
-\contentsline {subsection}{\numberline {5.2.3}Comparison with Mock Provider}{44}{subsection.5.2.3}%
-\contentsline {section}{\numberline {5.3}System Performance}{44}{section.5.3}%
-\contentsline {subsection}{\numberline {5.3.1}Pipeline Throughput}{44}{subsection.5.3.1}%
-\contentsline {subsection}{\numberline {5.3.2}Caching Effectiveness}{45}{subsection.5.3.2}%
-\contentsline {subsection}{\numberline {5.3.3}Database Performance}{45}{subsection.5.3.3}%
-\contentsline {section}{\numberline {5.4}Discussion}{45}{section.5.4}%
-\contentsline {subsection}{\numberline {5.4.1}Addressing the Research Questions}{45}{subsection.5.4.1}%
-\contentsline {subsection}{\numberline {5.4.2}Comparison with Existing Approaches}{46}{subsection.5.4.2}%
-\contentsline {chapter}{\numberline {6}Conclusions}{47}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Summary}{47}{section.6.1}%
-\contentsline {section}{\numberline {6.2}Limitations}{48}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Future Work}{49}{section.6.3}%
-\contentsline {chapter}{Bibliography}{51}{chapter*.12}%
+\contentsline {chapter}{\numberline {5}Results and Evaluation}{36}{chapter.5}%
+\contentsline {section}{\numberline {5.1}System Demonstration}{36}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Dashboard Landing Page}{36}{subsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.1.2}Search Execution}{37}{subsection.5.1.2}%
+\contentsline {subsection}{\numberline {5.1.3}Search Overview Tab}{37}{subsection.5.1.3}%
+\contentsline {subsection}{\numberline {5.1.4}Sentiment Trends Tab}{39}{subsection.5.1.4}%
+\contentsline {subsection}{\numberline {5.1.5}Subreddit Breakdown Tab}{40}{subsection.5.1.5}%
+\contentsline {subsection}{\numberline {5.1.6}Matched Content Explorer}{43}{subsection.5.1.6}%
+\contentsline {section}{\numberline {5.2}Sentiment Classification Quality}{45}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}OpenAI Provider Strengths}{45}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}OpenAI Provider Limitations}{45}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Comparison with Mock Provider}{46}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}System Performance}{46}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Pipeline Throughput}{46}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Caching Effectiveness}{47}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Database Performance}{47}{subsection.5.3.3}%
+\contentsline {section}{\numberline {5.4}Discussion}{47}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Addressing the Research Questions}{47}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Comparison with Existing Approaches}{48}{subsection.5.4.2}%
+\contentsline {chapter}{\numberline {6}Conclusions}{49}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Summary}{49}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Limitations}{50}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Future Work}{51}{section.6.3}%
+\contentsline {chapter}{Bibliography}{53}{chapter*.12}%
