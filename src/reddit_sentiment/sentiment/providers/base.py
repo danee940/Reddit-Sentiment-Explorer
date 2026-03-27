@@ -5,7 +5,7 @@ from typing import Protocol
 
 from reddit_sentiment.core.enums import SentimentLabel
 
-MOCK_PROVIDER_VERSION = "heuristic-v2"
+MOCK_PROVIDER_VERSION = "heuristic-v3"
 OPENAI_PROVIDER_OUTPUT_VERSION = "localized-rationale-v1"
 
 

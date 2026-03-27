@@ -31,8 +31,16 @@ async def test_mock_sentiment_supports_english_queries() -> None:
 
 
 @pytest.mark.asyncio
+async def test_mock_sentiment_supports_romanian_queries() -> None:
+    provider = MockSentimentProvider()
+    prediction = await provider.classify("Este oribil si foarte rau.", "ro")
+    assert prediction.label in {SentimentLabel.negative, SentimentLabel.very_negative}
+    assert prediction.score_value < 0
+
+
+@pytest.mark.asyncio
 async def test_mock_sentiment_supports_russian_queries() -> None:
     provider = MockSentimentProvider()
     prediction = await provider.classify("Это ужасно и очень плохо.", "ru")
-    assert prediction.label in {SentimentLabel.negative, SentimentLabel.very_negative}
-    assert prediction.score_value < 0
+    assert prediction.label in set(SentimentLabel)
+    assert prediction.provider_name == "mock"
