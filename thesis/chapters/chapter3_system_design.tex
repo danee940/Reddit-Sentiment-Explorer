@@ -1,7 +1,9 @@
 \chapter{System Design and Architecture}
 \label{ch:system_design}
 
+\begin{sloppypar}
 This chapter presents the design of Reddit Sentiment Explorer. I begin with the functional and non-functional requirements, then describe the high-level architecture, the data model, the query pipeline, the sentiment classification strategy, and the dashboard visualization design. Each design decision is motivated by the requirements and the gaps identified in the literature review.
+\end{sloppypar}
 
 \section{Requirements Analysis}
 \label{sec:requirements}
@@ -15,7 +17,7 @@ Based on the use case of ad-hoc sentiment exploration, I identify the following 
     \item \textbf{FR2: Subreddit scoping.} A user must be able to specify which subreddits to search, with sensible defaults provided.
     \item \textbf{FR3: Language filtering.} The system must filter collected content by a user-selected language so that the sentiment analysis operates on text in the expected language.
     \item \textbf{FR4: Sentiment classification.} Each matched document must be classified on a five-point sentiment scale with a label, numeric score, confidence, rationale, and evidence phrases.
-    \item \textbf{FR5: Aggregation and visualization.} The system must aggregate classification results into overview statistics, distribution charts, timelines, heatmaps, and subreddit breakdowns.
+    \item \textbf{FR5: Aggregation and visualization.} The system must aggregate classification results into overview statistics, distribution charts, timelines, heatmaps, and sub\-reddit breakdowns.
     \item \textbf{FR6: Document exploration.} A user must be able to view individual matched documents with their sentiment classification details.
     \item \textbf{FR7: Result caching.} If a recent result exists for the same term, subreddit scope, and language, the system should reuse it instead of re-running the pipeline.
     \item \textbf{FR8: Query refresh.} A user must be able to force a fresh re-run of a previously completed query.
@@ -65,7 +67,7 @@ The four services are:
 \begin{description}
     \item[API (FastAPI)] exposes REST endpoints for creating queries, retrieving run status, fetching chart data, and listing matched documents. It writes new query runs to the database with a ``pending'' status and returns immediately, satisfying NFR5.
 
-    \item[Worker] is a long-running Python process that polls the database for pending query runs. When it claims a run, it executes the full pipeline: data collection, matching, language filtering, sentiment classification, and aggregation. The worker communicates with external services (Arctic Shift, OpenAI) and writes all results to the database.
+    \item[Worker] is a long-running Python process that polls the database for pending query runs. When it claims a run, it executes the full pipeline: data collection, matching, language filtering, sentiment classification, and aggregation. The worker communicates with external services (Arctic Shift and OpenAI) and writes all results to the database.
 
     \item[Dashboard (Plotly Dash)] is the user-facing web application. It provides the search interface, displays visualizations, and polls the API for status updates during query execution. The dashboard does not access the database directly; all data flows through the API.
 
@@ -102,7 +104,7 @@ The data model consists of nine entities organized around the query lifecycle. F
 \caption{Summary of data model entities}
 \label{tab:entities}
 \small
-\begin{tabularx}{\textwidth}{lX}
+\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Entity} & \textbf{Description} \\
 \midrule
@@ -142,7 +144,9 @@ The query pipeline is the core workflow of the system. It transforms a user's se
 
 \subsection{Stage 1: Collect}
 
-The collector fetches posts and comments from the Arctic Shift API for each subreddit in the query run's scope. It sends separate search requests for posts and comments, each parameterized by the search term and subreddit name. The results are normalized into internal data classes (\texttt{CollectedPost} and \texttt{CollectedComment}) that decouple the pipeline from the external API format.
+\begin{sloppypar}
+The collector fetches posts and comments from the Arctic Shift API for each subreddit in the query run's scope. It sends separate search requests for posts and comments, each parameterized by the search term and subreddit name. The results are normalized into the internal data classes \texttt{CollectedPost} and \texttt{CollectedComment}. These types decouple the pipeline from the external API format.
+\end{sloppypar}
 
 \subsection{Stage 2: Persist}
 
@@ -188,14 +192,16 @@ The aggregation service computes precomputed chart payloads from the sentiment r
     \item \textbf{Sentiment distribution}: count of documents per label.
     \item \textbf{Sentiment timeline}: average sentiment score per day.
     \item \textbf{Volume timeline}: count of documents per day.
-    \item \textbf{Rolling sentiment timeline}: seven-day rolling average of sentiment scores.
+    \item \textbf{Rolling sentiment timeline}: seven-day rolling average of sen\-ti\-ment scores.
     \item \textbf{Subreddit breakdown}: average sentiment and document count per subreddit.
     \item \textbf{Sentiment heatmap}: document counts bucketed by day of week and hour of day.
     \item \textbf{Phrase breakdown}: match type distribution (phrase vs. token matches).
     \item \textbf{Spike events}: days with unusually high volume or extreme sentiment.
 \end{enumerate}
 
+\begin{sloppypar}
 Precomputing aggregates avoids expensive queries each time the dashboard requests chart data. The aggregates are stored as JSON payloads in the \texttt{aggregates} table, keyed by query run ID and aggregate type.
+\end{sloppypar}
 
 \subsection{State Machine}
 
@@ -229,9 +235,9 @@ class SentimentProvider(Protocol):
 Any class that implements this interface can serve as a sentiment provider. The system includes two providers:
 
 \begin{description}
-    \item[OpenAI provider] sends each document to the OpenAI chat completions API with a carefully designed system prompt that specifies the output JSON schema, the five-point sentiment scale, and the requirement for rationale and evidence phrases. The prompt instructs the model to base its classification only on the provided text and to write the rationale in the same language as the input.
+    \item[OpenAI provider] sends each document to the OpenAI chat completions API with a carefully designed system prompt that specifies the output JSON schema, the five-point sentiment scale, and the requirement for rationale and evidence phrases. The prompt instructs the model to base its classification only on the provided text and to write the rationale in the input language.
 
-    \item[Mock provider] uses a heuristic word-counting approach with predefined positive and negative word lists in English, Hungarian, and Russian. It is intended for development and testing, providing instant results without API costs.
+    \item[Mock provider] uses a heuristic word-counting approach with predefined positive and negative word lists in English, Hungarian, and Romanian. It is intended for development and testing, providing instant results without API costs.
 \end{description}
 
 The active provider is selected through the \texttt{LLM\_PROVIDER} environment variable, making it possible to switch providers without code changes (satisfying NFR2).
@@ -239,13 +245,13 @@ The active provider is selected through the \texttt{LLM\_PROVIDER} environment v
 \section{Dashboard and Visualization Design}
 \label{sec:dashboard_design}
 
-The dashboard follows the ``overview first, zoom and filter, then details on demand'' principle from \citeA{shneiderman1996eyes}. It organizes content into five tabs:
+The dashboard follows the overview+detail paradigm described by \citeA{cockburn2008overview}, presenting high-level metrics first and letting users zoom into specifics on demand. It organizes content into five tabs:
 
 \begin{enumerate}
     \item \textbf{Subreddit Scope}: allows users to add or remove subreddits from the search scope, with validation against the Reddit API.
     \item \textbf{Search Overview}: displays the main metrics (total documents, average score, sentiment ratio) and the primary charts (sentiment timeline, rolling average, distribution).
     \item \textbf{Sentiment Trends}: provides detailed temporal analysis with sentiment and volume timelines plus a day-of-week/hour heatmap.
-    \item \textbf{Subreddit Breakdown}: shows per-subreddit sentiment comparison, phrase match distribution, and spike event detection.
+    \item \textbf{Subreddit Breakdown}: shows per-sub\-reddit sentiment comparison, phrase match distribution, and spike event detection.
     \item \textbf{Matched Content}: lists individual matched documents with their sentiment labels, scores, rationale, and evidence phrases. Users can click any document to see full details and a link to the original Reddit post or comment.
 \end{enumerate}
 

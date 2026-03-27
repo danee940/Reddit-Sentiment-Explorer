@@ -99,7 +99,7 @@ FastAPI, the framework used in this project, is a modern Python web framework th
 
 \subsection{Interactive Data Visualization}
 
-Interactive visualization is essential for exploratory data analysis. \citeA{shneiderman1996eyes} formulated the ``Visual Information Seeking Mantra'': overview first, zoom and filter, then details on demand. This principle guides the design of Reddit Sentiment Explorer's dashboard, which presents overview metrics first and allows users to drill down into specific time periods, subreddits, and individual documents.
+Interactive visualization is essential for exploratory data analysis. \citeA{cockburn2008overview} survey multi-scale navigation techniques---overview+detail, zooming, and focus+context---and show that interfaces combining overview with drill-down consistently outperform single-scale alternatives. This principle guides the design of Reddit Sentiment Explorer's dashboard, which presents overview metrics first and allows users to drill down into specific time periods, subreddits, and individual documents.
 
 Plotly Dash is a Python framework for building interactive web applications with data visualization capabilities \cite{plotly2020dash}. It uses a reactive programming model where user interactions trigger callback functions that update the displayed data. This model aligns well with the exploratory nature of sentiment analysis, where users iteratively refine their view of the results.
 

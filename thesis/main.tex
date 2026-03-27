@@ -1,6 +1,7 @@
 \documentclass[12pt]{report}
 
 \usepackage[language=english, type=bachelor]{style}
+\usepackage{microtype}
 \usepackage{enumitem}
 \usepackage{indentfirst}
 \usepackage{listings}
@@ -62,6 +63,8 @@
 
 \begin{document}
 
+\hypersetup{pageanchor=false}
+
 % English title page
 \specialization{\\ Business Information Systems}
 \title{Reddit Sentiment Explorer: A Query-Driven Web Platform \\ for Analyzing Public Opinion Using Large Language Models}
@@ -91,6 +94,7 @@
 
 \newpage
 \pagenumbering{roman}
+\hypersetup{pageanchor=true}
 
 \input{chapters/abstract}
 

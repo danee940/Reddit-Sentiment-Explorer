@@ -6,7 +6,9 @@ This chapter evaluates Reddit Sentiment Explorer through a system demonstration,
 \section{System Demonstration}
 \label{sec:demonstration}
 
+\begin{sloppypar}
 To demonstrate the platform, I walk through a complete query lifecycle for the search term ``Sziget Fesztiv\'{a}l'' across four Hungarian subreddits: r/hungary, r/askhungary, r/budapest, and r/hu. The Sziget Festival is one of Europe's largest music and cultural festivals, held annually on \'{O}budai-sziget in Budapest. It is a recurring subject of discussion on Hungarian Reddit, making it a suitable case study because the topic generates both positive and negative opinions and is discussed almost exclusively in Hungarian.
+\end{sloppypar}
 
 \subsection{Dashboard Landing Page}
 
@@ -48,7 +50,7 @@ Figure~\ref{fig:overview_metrics} shows the Search And Overview tab for the ``Sz
     \label{fig:overview_metrics}
 \end{figure}
 
-These views implement the ``overview first'' principle from the Visual Information Seeking Mantra \cite{shneiderman1996eyes}. The user immediately sees the high-level picture: how many documents were found, whether the overall sentiment is positive or negative, and how it varies over time.
+These views implement the overview+detail paradigm \cite{cockburn2008overview}. The user immediately sees the high-level picture: how many documents were found, whether overall sentiment is positive or negative, and how it varies over time.
 
 \subsection{Sentiment Trends Tab}
 
@@ -186,4 +188,6 @@ The ``Sziget Fesztiv\'{a}l'' case study demonstrates that GPT-4o-mini correctly 
 
 \subsection{Comparison with Existing Approaches}
 
+\begin{sloppypar}
 Compared to the fragmented scripting approach common in academic research, Reddit Sentiment Explorer provides an integrated, interactive experience from search to visualization. Compared to commercial social listening platforms, it is open-source, customizable, and supports arbitrary search terms without predefined topic constraints. The main limitation relative to commercial tools is scalability: the current single-worker architecture is suited for individual exploration rather than large-scale enterprise monitoring.
+\end{sloppypar}

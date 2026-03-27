@@ -13,7 +13,7 @@ Table~\ref{tab:tech_stack} summarizes the technologies used in the project and t
 \caption{Technology stack overview}
 \label{tab:tech_stack}
 \small
-\begin{tabularx}{\textwidth}{llX}
+\begin{tabularx}{\textwidth}{ll>{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Layer} & \textbf{Technology} & \textbf{Rationale} \\
 \midrule
@@ -64,13 +64,16 @@ class ArcticShiftCollector:
     ) -> tuple[list[CollectedPost], list[CollectedComment]]:
         posts: list[CollectedPost] = []
         comments: list[CollectedComment] = []
-        async with httpx.AsyncClient(
+        async with self.client_factory(
             base_url=self.settings.arctic_shift_base_url,
             timeout=60.0,
         ) as client:
             for subreddit_name in subreddit_names:
                 post_payload = await self._request_posts(
-                    client, subreddit_name, term, request_limit,
+                    client=client,
+                    subreddit_name=subreddit_name,
+                    term=term,
+                    limit=request_limit,
                 )
                 for item in self._extract_items(post_payload):
                     post = self._normalize_post(item)
@@ -78,12 +81,15 @@ class ArcticShiftCollector:
                         continue
                     posts.append(post)
                     comment_payload = await self._request_comments(
-                        client, post.reddit_post_id,
-                        self.settings.arctic_shift_comment_limit,
+                        client=client,
+                        post_id=post.reddit_post_id,
+                        limit=self.settings.arctic_shift_comment_limit,
                     )
-                    for ci in self._extract_items(comment_payload):
+                    for comment_item in self._extract_items(comment_payload):
                         comment = self._normalize_comment(
-                            ci, post.reddit_post_id, post.subreddit,
+                            comment_item,
+                            post.reddit_post_id,
+                            post.subreddit,
                         )
                         if comment is not None:
                             comments.append(comment)
@@ -121,6 +127,7 @@ class SearchService:
         normalized_text = simplify_text(text)
         if not normalized_text:
             return False, None, [], 0.0
+        normalized_words = set(re.findall(r"\w+", normalized_text))
         if self.normalized_term in normalized_text:
             match_type = {
                 "title": MatchType.title_phrase,
@@ -129,8 +136,7 @@ class SearchService:
             }[source_type]
             return True, match_type, [self.raw_term], 1.0
         if len(self.term_tokens) > 1 and all(
-            token in set(re.findall(r"\w+", normalized_text))
-            for token in self.term_tokens
+            token in normalized_words for token in self.term_tokens
         ):
             match_type = {
                 "title": MatchType.title_tokens,
@@ -182,7 +188,9 @@ class LanguageService:
         )
 \end{lstlisting}
 
+\begin{sloppypar}
 The 0.7 confidence threshold provides a balance between filtering out off-language content and retaining short texts where language detection is inherently less confident. The \texttt{DetectorFactory.seed = 0} initialization ensures deterministic results across runs, which is important for reproducibility.
+\end{sloppypar}
 
 \section{Sentiment Classification}
 \label{sec:sentiment_impl}
@@ -215,24 +223,30 @@ class OpenAISentimentProvider:
     async def classify(
         self, text: str, content_language: str,
     ) -> SentimentPrediction:
+        language_code = normalize_content_language(
+            content_language
+        )
         language_label = get_language_label(language_code)
         prompt = (
             "You are classifying the sentiment of a single "
-            f"Reddit text written in {language_label}. "
+            f"Reddit text written in {language_label} "
+            f"({language_code}). "
             "Return only one valid JSON object with exactly "
             "these keys: label, score_value, confidence, "
             "rationale, evidence_phrases. "
+            "Do not wrap the JSON in markdown. "
             "Rules: "
             "label must be exactly one of very_negative, "
             "negative, neutral, positive, very_positive. "
             "score_value must be exactly one of -2, -1, 0, "
             "1, 2. "
-            "confidence must be a JSON number between 0 "
-            "and 1. "
+            "confidence must be a JSON number between 0 and 1,"
+            " not a string and not a word. "
             "rationale must be a short explanation in the "
             "same language as the input text. "
-            "evidence_phrases must be a JSON array containing "
-            "1 to 3 short exact quotes from the input text."
+            "evidence_phrases must be a JSON array with 1 to "
+            "3 short exact quotes from the input text. "
+            "Base the classification only on the provided text."
         )
         payload = {
             "model": self.settings.llm_model,
@@ -242,9 +256,16 @@ class OpenAISentimentProvider:
             ],
             "response_format": {"type": "json_object"},
         }
+        headers = {
+            "Authorization": f"Bearer {self.settings.llm_api_key}",
+            "Content-Type": "application/json",
+        }
         data = await self._post_completion(headers, payload)
         content = data["choices"][0]["message"]["content"]
         parsed = json.loads(content)
+        raw_evidence = parsed.get("evidence_phrases", [])
+        if not isinstance(raw_evidence, list):
+            raw_evidence = []
         return SentimentPrediction(
             label=SentimentLabel(parsed["label"]),
             score_value=int(parsed["score_value"]),
@@ -254,7 +275,7 @@ class OpenAISentimentProvider:
             rationale=parsed.get("rationale"),
             evidence_phrases=[
                 str(item).strip()
-                for item in parsed.get("evidence_phrases", [])
+                for item in raw_evidence
                 if str(item).strip()
             ][:3],
             provider_name="openai",
@@ -267,7 +288,7 @@ class OpenAISentimentProvider:
 Several design decisions merit discussion:
 
 \begin{itemize}
-    \item The \texttt{response\_format: \{"type": "json\_object"\}} parameter instructs the model to return valid JSON, eliminating the need for markdown stripping or fuzzy JSON parsing.
+    \item The \texttt{response\_format: \{"type": "json\_object"\}} parameter instructs the model to return valid JSON. The prompt additionally includes explicit instructions not to wrap the response in markdown, reinforcing the format constraint.
     \item The prompt explicitly lists the allowed values for each field, reducing the chance of unexpected outputs.
     \item The \texttt{evidence\_phrases} field requires exact quotes from the input text, providing verifiable evidence for the classification.
     \item The \texttt{rationale} is requested in the same language as the input, making it accessible to users who may not read English.
@@ -288,7 +309,7 @@ The API call is wrapped with tenacity's retry decorator, which retries up to thr
 async def _post_completion(
     self, headers: dict[str, str], payload: dict,
 ) -> dict:
-    async with httpx.AsyncClient(
+    async with self.client_factory(
         base_url=self.settings.llm_api_base_url,
         timeout=60.0,
     ) as client:
@@ -302,7 +323,7 @@ async def _post_completion(
 
 \subsection{Mock Provider}
 
-The mock provider uses heuristic word counting for development and testing. It maintains word lists for positive and negative terms in English, Hungarian, and Russian, and produces a sentiment label based on the balance of positive and negative word occurrences. While not intended for production use, it enables the full pipeline to be tested without API costs or network access.
+The mock provider uses heuristic word counting for development and testing. It maintains word lists for positive and negative terms in English, Hungarian, and Romanian, and produces a sentiment label based on the balance of positive and negative word occurrences. While not intended for production use, it enables the full pipeline to be tested without API costs or network access.
 
 \section{Query Pipeline Orchestration}
 \label{sec:pipeline_impl}
@@ -315,61 +336,57 @@ async def run_query_pipeline(
     query_run: QueryRun,
     term: str,
     subreddit_names: list[str],
+    services: QueryPipelineServices | None = None,
 ) -> None:
-    query_service = QueryService(session)
-    language_service = LanguageService()
-    search_service = SearchService(term)
-    collector = ArcticShiftCollector()
-    sentiment_service = SentimentService(session)
-    aggregation_service = AggregationService(session)
+    run_id = query_run.id
+    pipeline = services or create_query_pipeline_services(
+        session, term
+    )
+    collection_service = pipeline.collection_persistence_service
+    match_service = pipeline.document_match_service
 
-    await query_service.mark_running(query_run)
+    await pipeline.query_service.mark_running(query_run)
     await session.commit()
 
     try:
-        posts, comments = await collector.collect(
+        posts, comments = await pipeline.collector.collect(
             term=term, subreddit_names=subreddit_names
         )
         persisted_documents: list[Document] = []
         for post in posts:
-            doc = await _persist_post(
-                session, post,
-                query_run.language_filter,
-                language_service, search_service,
+            doc = await collection_service.persist_post(
+                post, query_run.language_filter,
             )
-            if doc:
+            if doc is not None:
                 persisted_documents.append(doc)
         for comment in comments:
-            doc = await _persist_comment(
-                session, comment,
-                query_run.language_filter,
-                language_service, search_service,
+            doc = await collection_service.persist_comment(
+                comment, query_run.language_filter,
             )
-            if doc:
+            if doc is not None:
                 persisted_documents.append(doc)
 
-        matched_documents = []
+        matched_documents: list[Document] = []
         for document in persisted_documents:
-            matched = await _match_document(
-                session, query_run, document,
-                search_service,
-            )
-            if matched:
+            if await match_service.match_and_persist(
+                query_run, document,
+                pipeline.search_service,
+            ):
                 matched_documents.append(document)
 
         for document in matched_documents:
-            await sentiment_service.classify_document(
+            await pipeline.sentiment_service.classify_document(
                 query_run, document,
             )
 
-        await aggregation_service.build(query_run.id)
-        await query_service.mark_completed(query_run)
+        await pipeline.aggregation_service.build(query_run.id)
+        await pipeline.query_service.mark_completed(query_run)
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        failed_run = await query_service.get_run(run_id)
+        failed_run = await pipeline.query_service.get_run(run_id)
         if failed_run is not None:
-            await query_service.mark_failed(
+            await pipeline.query_service.mark_failed(
                 failed_run, str(exc),
             )
             await session.commit()
@@ -383,7 +400,32 @@ The pipeline follows a clear sequential flow: collect, persist, match, classify,
 
 The worker is a long-running process that polls PostgreSQL for pending query runs.
 
-\begin{lstlisting}[language=Python, caption={Worker main loop}]
+\begin{lstlisting}[language=Python, caption={Worker helper functions and main polling loop}]
+async def claim_next_pending_run_id() -> str | None:
+    async with get_session_factory()() as session:
+        query_service = create_query_service(session)
+        run = await query_service.claim_next_pending_run()
+        if run is None:
+            return None
+        await session.commit()
+        return run.id
+
+async def process_run(run_id: str) -> None:
+    async with get_session_factory()() as session:
+        read_service = create_query_read_service(session)
+        run = await read_service.get_run(run_id)
+        if run is None:
+            return
+        query = await read_service.get_query(run.query_id)
+        await run_query_pipeline(
+            session=session,
+            query_run=run,
+            term=query.raw_term,
+            subreddit_names=run.scope_config.get(
+                "subreddits", []
+            ),
+        )
+
 async def process_pending_runs(
     poll_interval: int = 10,
 ) -> None:
@@ -394,31 +436,19 @@ async def process_pending_runs(
     )
     while True:
         processed_any = False
-        async with AsyncSessionLocal() as session:
-            query_service = QueryService(session)
-            while True:
-                run = await query_service\
-                    .claim_next_pending_run()
-                if run is None:
-                    break
-                processed_any = True
-                await session.commit()
-                query = await session.get(
-                    Query, run.query_id,
-                )
-                await run_query_pipeline(
-                    session=session,
-                    query_run=run,
-                    term=query.raw_term,
-                    subreddit_names=run.scope_config.get(
-                        "subreddits", []
-                    ),
-                )
+        while True:
+            run_id = await claim_next_pending_run_id()
+            if run_id is None:
+                break
+            processed_any = True
+            await process_run(run_id)
         if not processed_any:
             await asyncio.sleep(poll_interval)
 \end{lstlisting}
 
-The \texttt{claim\_next\_pending\_run} method uses \texttt{SELECT ... FOR UPDATE SKIP LOCKED}, a PostgreSQL feature that atomically locks and claims a row while skipping rows already locked by other transactions. This enables safe concurrent processing if multiple worker instances are deployed, without requiring a separate message broker.
+\begin{sloppypar}
+The \texttt{claim\_next\_pending\_run} method on the underlying service uses \texttt{SELECT ... FOR UPDATE SKIP LOCKED}, a PostgreSQL feature that atomically locks and claims a row while skipping rows already locked by other transactions. This enables safe concurrent processing if multiple worker instances are deployed, without requiring a separate message broker. The claim and execution steps are separated into \texttt{claim\_next\_pending\_run\_id} and \texttt{process\_run}, each opening its own database session. This ensures that the claim commit is not held open during the entire pipeline execution, reducing lock contention.
+\end{sloppypar}
 
 At startup, the worker recovers stale runs --- query runs that have been in the ``running'' state for longer than the configured threshold. These are requeued to ``pending'' status, handling cases where the worker process crashed mid-execution.
 
@@ -428,12 +458,12 @@ At startup, the worker recovers stale runs --- query runs that have been in the 
 The API is built with FastAPI and exposes RESTful endpoints for the dashboard to consume. The key endpoints are:
 
 \begin{itemize}
-    \item \texttt{POST /queries} --- Creates a new query and query run (or returns a cached recent run).
-    \item \texttt{GET /query-runs/\{run\_id\}} --- Returns the status and metadata of a query run.
-    \item \texttt{GET /query-runs/\{run\_id\}/charts} --- Returns the precomputed chart payloads.
-    \item \texttt{GET /query-runs/\{run\_id\}/documents} --- Returns matched documents with sentiment details.
-    \item \texttt{POST /query-runs/\{run\_id\}/refresh} --- Creates a fresh re-run for the same query.
-    \item \texttt{GET /ready} --- Health check endpoint.
+    \item \path|POST /queries| --- Creates a new query and query run (or returns a cached recent run).
+    \item \path|GET /query-runs/{run_id}| --- Returns the status and metadata of a query run.
+    \item \path|GET /query-runs/{run_id}/charts| --- Returns the precomputed chart payloads.
+    \item \path|GET /query-runs/{run_id}/documents| --- Returns matched documents with sentiment details.
+    \item \path|POST /query-runs/{run_id}/refresh| --- Creates a fresh re-run for the same query.
+    \item \path|GET /ready| --- Health check endpoint.
 \end{itemize}
 
 The API uses Pydantic models for request validation and response serialization. Database sessions are managed through FastAPI's dependency injection, ensuring proper lifecycle management.
@@ -534,7 +564,7 @@ Key deployment features:
 \begin{itemize}
     \item \textbf{Health checks} ensure that services start in the correct order. The API waits for PostgreSQL to be ready, the dashboard waits for the API, and the worker waits for both the database and the API.
     \item \textbf{Restart policies} (\texttt{unless-stopped}) ensure that services recover from transient failures.
-    \item \textbf{Environment files} (\texttt{.env}) externalize all configuration, including API keys, database credentials, and model selection.
+    \item \begin{sloppypar}\textbf{Environment files} (\texttt{.env}) externalize all configuration, including API keys, database credentials, and model selection.\end{sloppypar}
     \item \textbf{Database migrations} run automatically at API startup using Alembic with a PostgreSQL advisory lock, preventing race conditions when multiple services start simultaneously.
 \end{itemize}
 

@@ -13,13 +13,13 @@ The platform addresses the gap between ad-hoc sentiment analysis scripts and com
 \begin{enumerate}
     \item \textbf{A modular, four-service architecture} that cleanly separates the API, worker, dashboard, and database concerns. This architecture enables independent development and deployment of each component, and the pipeline design (collect, persist, match, filter, classify, aggregate) provides clear extension points for future enhancements.
 
-    \item \textbf{A provider-agnostic sentiment classification layer} that abstracts the classification interface behind a Python protocol. This enables swapping between an OpenAI-based provider for production use and a heuristic mock provider for development, and can accommodate new providers (such as open-source models) without changes to the rest of the system.
+    \item \textbf{A provider-agnostic sentiment classification layer} that abstracts the classification interface behind a Python protocol. This enables swapping between an OpenAI-based provider for production use and a heuristic mock provider for development, and can accommodate new providers (for example, open-source models) without changes to the rest of the system.
 
     \item \textbf{Interpretable sentiment classification} that goes beyond labels and confidence scores. By leveraging the language generation capabilities of large language models, each classification includes a rationale and evidence phrases, making the results transparent and verifiable by the end user.
 
     \item \textbf{A document abstraction layer} that normalizes Reddit posts and comments into a common representation. This simplifies the matching, classification, and aggregation logic and makes the pipeline agnostic to the underlying content type.
 
-    \item \textbf{An interactive dashboard} with nine types of aggregated visualizations (overview, distribution, timelines, heatmaps, breakdowns, spike detection), multilingual UI support (English and Hungarian), and light/dark themes. The dashboard follows the Visual Information Seeking Mantra, providing overview first, then zoom and filter, then details on demand.
+    \item \textbf{An interactive dashboard} with nine types of aggregated visualizations (overview, distribution, timelines, heatmaps, breakdowns, spike detection), multilingual UI support (English and Hungarian), and light/dark themes. The dashboard follows the overview+detail paradigm, presenting high-level metrics first and letting users zoom into specific time periods, subreddits, and individual documents.
 \end{enumerate}
 
 The evaluation demonstrates that the OpenAI provider produces contextually appropriate, multilingual sentiment classifications on informal Reddit text, with interpretable output that traditional classifiers do not provide. The system successfully answers both research questions posed in Chapter~\ref{ch:introduction}.
