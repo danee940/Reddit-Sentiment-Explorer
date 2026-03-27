@@ -74,16 +74,27 @@ curl -X POST http://localhost:8000/queries \
 ## Testing
 
 ```bash
-env -u DATABASE_URL python -m pytest
+python -m pytest
 ```
 
-CI runs `ruff check .` and `pytest` on every push.
+Optional API integration tests against PostgreSQL (they truncate application tables; use a dedicated database). With Docker Compose’s `db` service:
+
+```bash
+./scripts/run-integration-tests.sh
+```
+
+Or set the URL yourself (database must exist):
+
+```bash
+INTEGRATION_DATABASE_URL='postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment_test' python -m pytest tests/integration
+```
+
+CI runs `ruff check .` and `pytest` on every push, including integration tests against a Postgres service container.
 
 ## Troubleshooting
 
 If local Python commands pick up the wrong database, unset or override `DATABASE_URL`:
 
 ```bash
-env -u DATABASE_URL python -m pytest
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment python -m uvicorn ...
 ```
