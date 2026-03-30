@@ -6,6 +6,7 @@ from dash import no_update
 
 from reddit_sentiment.dashboard.callbacks import documents as documents_callbacks
 from reddit_sentiment.dashboard.callbacks import query as query_callbacks
+from reddit_sentiment.dashboard.components.base import build_sentiment_badge
 
 
 def test_create_query_sends_content_language_separately_from_ui_language(monkeypatch) -> None:
@@ -283,3 +284,15 @@ def test_filter_document_rows_selects_first_matching_id() -> None:
         items, None, None, None, None, None, "en"
     )
     assert selected == ["doc-alpha"]
+
+
+def test_build_sentiment_badge_positive_uses_themed_class() -> None:
+    span = build_sentiment_badge("positive", "en")
+    class_name = str(span.to_plotly_json().get("props", {}).get("className", ""))
+    assert "sentiment-badge--positive" in class_name
+
+
+def test_build_sentiment_badge_normalizes_case_and_whitespace() -> None:
+    span = build_sentiment_badge(" Positive ", "en")
+    class_name = str(span.to_plotly_json().get("props", {}).get("className", ""))
+    assert "sentiment-badge--positive" in class_name

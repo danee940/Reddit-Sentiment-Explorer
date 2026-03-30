@@ -87,19 +87,28 @@ def binary_toggle(
     )
 
 
+_SENTIMENT_BADGE_VARIANTS: dict[str, str] = {
+    "very_negative": "sentiment-badge--very-negative",
+    "negative": "sentiment-badge--negative",
+    "neutral": "sentiment-badge--neutral",
+    "positive": "sentiment-badge--positive",
+    "very_positive": "sentiment-badge--very-positive",
+    "unscored": "sentiment-badge--unscored",
+}
+
+
 def build_sentiment_badge(label: str | None, language: str | None) -> html.Span:
-    badge_classes = {
-        "very_negative": "bg-red-100 text-red-800",
-        "negative": "bg-red-100 text-red-800",
-        "neutral": "bg-gray-100 text-gray-700",
-        "positive": "bg-emerald-100 text-emerald-700",
-        "very_positive": "bg-green-100 text-green-800",
-    }
-    sentiment_label = label or "unscored"
-    badge_class = badge_classes.get(sentiment_label, "bg-slate-100 text-slate-700")
+    stripped = (label or "").strip()
+    normalized = stripped.lower() if stripped else "unscored"
+    if normalized in _SENTIMENT_BADGE_VARIANTS:
+        variant_class = _SENTIMENT_BADGE_VARIANTS[normalized]
+        text_key = normalized
+    else:
+        variant_class = _SENTIMENT_BADGE_VARIANTS["unscored"]
+        text_key = stripped or "unscored"
     return html.Span(
-        translate_sentiment_label(sentiment_label, language),
-        className=f"inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {badge_class}",
+        translate_sentiment_label(text_key, language),
+        className=f"sentiment-badge {variant_class}",
     )
 
 
