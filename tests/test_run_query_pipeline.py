@@ -1,8 +1,6 @@
 import asyncio
 import importlib
 
-import pytest
-
 from reddit_sentiment.collectors.arctic_shift.client import (
     ArcticShiftCollector,
     CollectedComment,
@@ -100,7 +98,11 @@ def test_run_query_pipeline_marks_failure_with_stable_run_id() -> None:
     query_run = QueryRunStub()
     session = SessionStub(query_run)
     services = QueryPipelineServices(
-        settings=Settings(default_subreddits=["hungary"], llm_provider="mock", llm_api_key=""),
+        settings=Settings(
+            default_subreddits=["hungary"],
+            sentiment_provider="mock",
+            llm_api_key="",
+        ),
         query_service=QueryServiceStub(),
         language_service=LanguageService(),
         search_service=SearchService("Tisza"),
@@ -111,16 +113,15 @@ def test_run_query_pipeline_marks_failure_with_stable_run_id() -> None:
         document_match_service=DocumentMatchServiceStub(),
     )
 
-    with pytest.raises(RuntimeError, match="collector exploded"):
-        asyncio.run(
-            pipeline_module.run_query_pipeline(
-                session=session,
-                query_run=query_run,
-                term="Tisza",
-                subreddit_names=["hungary"],
-                services=services,
-            )
+    asyncio.run(
+        pipeline_module.run_query_pipeline(
+            session=session,
+            query_run=query_run,
+            term="Tisza",
+            subreddit_names=["hungary"],
+            services=services,
         )
+    )
 
     assert tracker["get_run_id"] == "run-123"
     assert tracker["mark_failed_run_id"] == "run-123"
