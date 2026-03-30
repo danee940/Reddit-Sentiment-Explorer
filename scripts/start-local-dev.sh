@@ -2,22 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SHOW_LOGS_RAW="${1:-false}"
-
-if [[ "${SHOW_LOGS_RAW}" == "-h" || "${SHOW_LOGS_RAW}" == "--help" ]]; then
-  echo "Usage: scripts/start-local-dev.sh [show_logs]"
-  echo "  show_logs=true  -> show logs in terminal and logs/*.log"
-  echo "  show_logs=false -> write logs to logs/*.log (default)"
-  exit 0
-fi
-
-SHOW_LOGS="$(echo "${SHOW_LOGS_RAW}" | tr '[:upper:]' '[:lower:]')"
-if [[ "${SHOW_LOGS}" == "true" || "${SHOW_LOGS}" == "1" || "${SHOW_LOGS}" == "yes" || "${SHOW_LOGS}" == "y" ]]; then
-  SHOW_LOGS="true"
-else
-  SHOW_LOGS="false"
-fi
 LOG_DIR="${ROOT_DIR}/logs"
+PID_FILE="${LOG_DIR}/local-dev.pids"
 
 export PYENV_VERSION="3.12.9"
 export API_BASE_URL="http://localhost:8000"
@@ -44,7 +30,7 @@ free_port() {
   fi
 }
 
-cleanup() {
+cleanup_partial() {
   if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
     return
   fi
@@ -64,24 +50,26 @@ cleanup() {
 }
 
 on_interrupt() {
-  cleanup
+  cleanup_partial
   exit 130
 }
 
 start_process() {
   local process_name="$1"
   shift
-
-  if [[ "${SHOW_LOGS}" == "true" ]]; then
-    "$@" > >(sed -u "s/^/[${process_name}] /" | tee "${LOG_DIR}/${process_name}.log") 2>&1 &
-  else
-    "$@" >"${LOG_DIR}/${process_name}.log" 2>&1 &
-  fi
+  local logfile="${LOG_DIR}/${process_name}.log"
+  "$@" > >(
+    stdbuf -oL bash -c '
+      logfile="$1"
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        printf "%s %s\n" "$(date -Iseconds)" "$line"
+      done >> "$logfile"
+    ' _ "$logfile"
+  ) 2>&1 &
   STARTED_PID="$!"
 }
 
 trap on_interrupt INT TERM
-trap cleanup EXIT
 
 cd "${ROOT_DIR}"
 docker compose up -d db
@@ -101,4 +89,13 @@ DASHBOARD_PID="${STARTED_PID}"
 start_process worker pyenv exec python -m reddit_sentiment.worker
 WORKER_PID="${STARTED_PID}"
 
-wait
+{
+  echo "api=${API_PID}"
+  echo "dashboard=${DASHBOARD_PID}"
+  echo "worker=${WORKER_PID}"
+} >"${PID_FILE}"
+
+trap - INT TERM
+
+echo "Local dev started (API :8000, dashboard :8050). Logs: ${LOG_DIR}/*.log"
+echo "Stop with: ${ROOT_DIR}/scripts/stop-local-dev.sh"
