@@ -2,7 +2,7 @@
 
 A query-driven platform for analyzing sentiment of user-entered terms across Reddit communities. Enter a term, pick subreddits and a content language, and the app collects matching Reddit content, runs sentiment classification, and displays charts in a dashboard.
 
-Stack: `Arctic Shift` (data), `OpenAI`, `mock`, or local XLM-RoBERTa (`LLM_PROVIDER=xlm_roberta`, multilingual Transformers model) for sentiment, `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
+Stack: `Arctic Shift` (data), `OpenAI`, `mock`, or local XLM-RoBERTa (`SENTIMENT_PROVIDER=xlm_roberta`, multilingual Transformers model) for sentiment, `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
 
 ## Architecture
 
@@ -30,13 +30,13 @@ Copy `.env.example` to `.env`. Key variables:
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ARCTIC_SHIFT_BASE_URL` | Arctic Shift API base URL |
-| `LLM_PROVIDER` | `mock`, `openai`, or `xlm_roberta` |
+| `SENTIMENT_PROVIDER` | `mock`, `openai`, or `xlm_roberta` |
 | `LLM_API_KEY` | API key for OpenAI |
 | `LLM_MODEL` | Model name, e.g. `gpt-4o-mini` |
 | `DEFAULT_SUBREDDITS` | Comma-separated default subreddit list |
 | `INTEGRATION_DATABASE_URL` | PostgreSQL URL for integration tests (dedicated database) |
 
-Use `LLM_PROVIDER=mock` for development without LLM cost.
+Use `SENTIMENT_PROVIDER=mock` for development without API cost for classification.
 
 ## Run With Docker
 

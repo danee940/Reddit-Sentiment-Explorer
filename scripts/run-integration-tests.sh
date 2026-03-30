@@ -23,6 +23,6 @@ done
 
 docker compose exec -T db createdb -U postgres reddit_sentiment_test 2>/dev/null || true
 
-export LLM_PROVIDER="${LLM_PROVIDER:-mock}"
+export SENTIMENT_PROVIDER="${SENTIMENT_PROVIDER:-mock}"
 
 exec python -m pytest tests/integration "$@"

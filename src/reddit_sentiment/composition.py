@@ -80,13 +80,13 @@ def create_sentiment_provider(
     client_factory: AsyncClientFactory | None = None,
 ) -> tuple[SentimentProvider, str, str]:
     active_settings = settings or get_settings()
-    if active_settings.llm_provider == "openai" and active_settings.llm_api_key:
+    if active_settings.sentiment_provider == "openai" and active_settings.llm_api_key:
         return (
             OpenAISentimentProvider(active_settings, client_factory),
             "openai",
             get_openai_provider_version(active_settings.llm_model),
         )
-    if active_settings.llm_provider == "xlm_roberta":
+    if active_settings.sentiment_provider == "xlm_roberta":
         return (
             XLMRobertaSentimentProvider(),
             "xlm_roberta",

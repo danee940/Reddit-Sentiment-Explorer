@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     arctic_shift_base_url: str = "https://arctic-shift.photon-reddit.com/api"
     arctic_shift_request_limit: int | Literal["auto"] = 25
     arctic_shift_comment_limit: int | Literal["auto"] = 100
-    llm_provider: str = "mock"
+    sentiment_provider: str = "mock"
     llm_api_key: str = ""
     llm_api_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"

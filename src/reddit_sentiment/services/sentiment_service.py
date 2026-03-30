@@ -34,9 +34,9 @@ class SentimentService:
         self.settings = settings or get_settings()
         if provider is not None:
             self.provider = provider
-        elif self.settings.llm_provider == "openai" and self.settings.llm_api_key:
+        elif self.settings.sentiment_provider == "openai" and self.settings.llm_api_key:
             self.provider = OpenAISentimentProvider(self.settings)
-        elif self.settings.llm_provider == "xlm_roberta":
+        elif self.settings.sentiment_provider == "xlm_roberta":
             self.provider = XLMRobertaSentimentProvider()
         else:
             self.provider = MockSentimentProvider()
@@ -105,9 +105,9 @@ class SentimentService:
         )
 
     def _get_provider_name(self) -> str:
-        if self.settings.llm_provider == "openai" and self.settings.llm_api_key:
+        if self.settings.sentiment_provider == "openai" and self.settings.llm_api_key:
             return "openai"
-        if self.settings.llm_provider == "xlm_roberta":
+        if self.settings.sentiment_provider == "xlm_roberta":
             return "xlm_roberta"
         return "mock"
 

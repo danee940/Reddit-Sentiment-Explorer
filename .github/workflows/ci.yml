@@ -36,6 +36,6 @@ jobs:
         run: python -m mypy src/ tests/
       - name: Pytest
         env:
-          LLM_PROVIDER: mock
+          SENTIMENT_PROVIDER: mock
           INTEGRATION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment_test
         run: pytest
