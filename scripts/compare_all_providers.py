@@ -11,11 +11,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import asyncpg  # type: ignore[import-untyped]
 
 from reddit_sentiment.core.config import get_settings  # pyright: ignore[reportMissingImports]
-from reddit_sentiment.sentiment.providers.mock import (
-    MockSentimentProvider,  # pyright: ignore[reportMissingImports]
+from reddit_sentiment.sentiment.providers.mock import (  # pyright: ignore[reportMissingImports]
+    MockSentimentProvider,
 )
-from reddit_sentiment.sentiment.providers.xlm_roberta import (
-    XLMRobertaSentimentProvider,  # pyright: ignore[reportMissingImports]
+from reddit_sentiment.sentiment.providers.xlm_roberta import (  # pyright: ignore[reportMissingImports]
+    XLMRobertaSentimentProvider,
 )
 
 ALL_LABELS = [
