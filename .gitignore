@@ -45,13 +45,3 @@ Thumbs.db
 # Logs
 *.log
 logs
-
-# LaTeX / thesis build artifacts
-thesis/output/*.aux
-thesis/output/*.bbl
-thesis/output/*.blg
-thesis/output/*.fdb_latexmk
-thesis/output/*.fls
-thesis/output/*.log
-thesis/output/*.out
-thesis/output/*.toc

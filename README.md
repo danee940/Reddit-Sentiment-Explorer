@@ -34,6 +34,7 @@ Copy `.env.example` to `.env`. Key variables:
 | `LLM_API_KEY` | API key for OpenAI |
 | `LLM_MODEL` | Model name, e.g. `gpt-4o-mini` |
 | `DEFAULT_SUBREDDITS` | Comma-separated default subreddit list |
+| `INTEGRATION_DATABASE_URL` | PostgreSQL URL for integration tests (dedicated database) |
 
 Use `LLM_PROVIDER=mock` for development without LLM cost.
 
@@ -77,19 +78,13 @@ curl -X POST http://localhost:8000/queries \
 python -m pytest
 ```
 
-Optional API integration tests against PostgreSQL (they truncate application tables; use a dedicated database). With Docker Compose’s `db` service:
+Optional API integration tests against PostgreSQL (they truncate application tables; use a dedicated database). Set `INTEGRATION_DATABASE_URL` in `.env`, then run:
 
 ```bash
 ./scripts/run-integration-tests.sh
 ```
 
-Or set the URL yourself (database must exist):
-
-```bash
-INTEGRATION_DATABASE_URL='postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment_test' python -m pytest tests/integration
-```
-
-CI runs `ruff check .` and `pytest` on every push, including integration tests against a Postgres service container.
+The script starts Docker Compose’s `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
 
 ## Troubleshooting
 
