@@ -88,4 +88,3 @@ async def run_query_pipeline(
             await pipeline_services.query_service.mark_failed(failed_run, str(exc))
             await session.commit()
         logger.exception("query_pipeline_failed run_id=%s error=%s", run_id, exc)
-        raise

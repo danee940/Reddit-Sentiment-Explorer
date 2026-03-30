@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from reddit_sentiment.collectors.arctic_shift.client import (
@@ -36,19 +37,30 @@ class CollectionPersistenceService:
             select(Post).where(Post.reddit_post_id == post.reddit_post_id)
         )
         if stored_post is None:
-            stored_post = Post(
-                reddit_post_id=post.reddit_post_id,
-                subreddit_id=subreddit.id,
-                title=post.title,
-                body=post.body,
-                author_name=post.author_name,
-                score=post.score,
-                created_utc=post.created_utc,
-                permalink=post.permalink,
-                raw_payload=post.raw_payload,
-            )
-            self.session.add(stored_post)
-            await self.session.flush()
+            nested = await self.session.begin_nested()
+            try:
+                stored_post = Post(
+                    reddit_post_id=post.reddit_post_id,
+                    subreddit_id=subreddit.id,
+                    title=post.title,
+                    body=post.body,
+                    author_name=post.author_name,
+                    score=post.score,
+                    created_utc=post.created_utc,
+                    permalink=post.permalink,
+                    raw_payload=post.raw_payload,
+                )
+                self.session.add(stored_post)
+                await self.session.flush()
+            except IntegrityError:
+                await nested.rollback()
+                stored_post = await self.session.scalar(
+                    select(Post).where(Post.reddit_post_id == post.reddit_post_id)
+                )
+                if stored_post is None:
+                    raise
+            else:
+                await nested.commit()
 
         full_text = " ".join(part for part in [post.title, post.body] if part).strip()
         title_matches = self.search_service.match_text(post.title, "title")[0]
@@ -79,19 +91,30 @@ class CollectionPersistenceService:
             select(Comment).where(Comment.reddit_comment_id == comment.reddit_comment_id)
         )
         if stored_comment is None:
-            stored_comment = Comment(
-                reddit_comment_id=comment.reddit_comment_id,
-                post_id=stored_post.id if stored_post else None,
-                subreddit_id=subreddit.id,
-                body=comment.body,
-                author_name=comment.author_name,
-                score=comment.score,
-                created_utc=comment.created_utc,
-                permalink=comment.permalink,
-                raw_payload=comment.raw_payload,
-            )
-            self.session.add(stored_comment)
-            await self.session.flush()
+            nested = await self.session.begin_nested()
+            try:
+                stored_comment = Comment(
+                    reddit_comment_id=comment.reddit_comment_id,
+                    post_id=stored_post.id if stored_post else None,
+                    subreddit_id=subreddit.id,
+                    body=comment.body,
+                    author_name=comment.author_name,
+                    score=comment.score,
+                    created_utc=comment.created_utc,
+                    permalink=comment.permalink,
+                    raw_payload=comment.raw_payload,
+                )
+                self.session.add(stored_comment)
+                await self.session.flush()
+            except IntegrityError:
+                await nested.rollback()
+                stored_comment = await self.session.scalar(
+                    select(Comment).where(Comment.reddit_comment_id == comment.reddit_comment_id)
+                )
+                if stored_comment is None:
+                    raise
+            else:
+                await nested.commit()
 
         if not self.search_service.match_text(comment.body, "comment")[0]:
             return None
