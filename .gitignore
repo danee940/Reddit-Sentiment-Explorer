@@ -42,6 +42,8 @@ Thumbs.db
 .ipynb_checkpoints/
 .envrc
 
+scripts/**/*.json
+
 # Logs
 *.log
 logs

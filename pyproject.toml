@@ -25,6 +25,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ml = [
+  "transformers>=4.40.0",
+  "torch>=2.0.0",
+]
 dev = [
   "mypy>=1.13.0",
   "pytest>=8.3.4",
@@ -70,7 +74,7 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["dash", "langdetect", "plotly", "plotly.express"]
+module = ["dash", "langdetect", "plotly", "plotly.express", "transformers"]
 ignore_missing_imports = true
 
 [tool.pylint.messages_control]

@@ -8,9 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from reddit_sentiment.collectors.arctic_shift.client import ArcticShiftCollector
 from reddit_sentiment.core.config import Settings, get_settings
-from reddit_sentiment.sentiment.providers import MockSentimentProvider, OpenAISentimentProvider
+from reddit_sentiment.sentiment.providers import (
+    MockSentimentProvider,
+    OpenAISentimentProvider,
+    XLMRobertaSentimentProvider,
+)
 from reddit_sentiment.sentiment.providers.base import (
     MOCK_PROVIDER_VERSION,
+    XLM_ROBERTA_PROVIDER_VERSION,
     SentimentProvider,
     get_openai_provider_version,
 )
@@ -80,6 +85,12 @@ def create_sentiment_provider(
             OpenAISentimentProvider(active_settings, client_factory),
             "openai",
             get_openai_provider_version(active_settings.llm_model),
+        )
+    if active_settings.llm_provider == "xlm_roberta":
+        return (
+            XLMRobertaSentimentProvider(),
+            "xlm_roberta",
+            XLM_ROBERTA_PROVIDER_VERSION,
         )
     return MockSentimentProvider(), "mock", MOCK_PROVIDER_VERSION
 

@@ -2,7 +2,7 @@
 
 A query-driven platform for analyzing sentiment of user-entered terms across Reddit communities. Enter a term, pick subreddits and a content language, and the app collects matching Reddit content, runs sentiment classification, and displays charts in a dashboard.
 
-Stack: `Arctic Shift` (data), `OpenAI` or `mock` (sentiment), `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
+Stack: `Arctic Shift` (data), `OpenAI`, `mock`, or local XLM-RoBERTa (`LLM_PROVIDER=xlm_roberta`, multilingual Transformers model) for sentiment, `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Copy `.env.example` to `.env`. Key variables:
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ARCTIC_SHIFT_BASE_URL` | Arctic Shift API base URL |
-| `LLM_PROVIDER` | `mock` or `openai` |
+| `LLM_PROVIDER` | `mock`, `openai`, or `xlm_roberta` |
 | `LLM_API_KEY` | API key for OpenAI |
 | `LLM_MODEL` | Model name, e.g. `gpt-4o-mini` |
 | `DEFAULT_SUBREDDITS` | Comma-separated default subreddit list |
@@ -51,11 +51,11 @@ docker compose down            # stop
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip && pip install -e ".[dev]"
-./scripts/start-local-dev.sh        # logs to logs/*.log
-./scripts/start-local-dev.sh true   # stream logs to terminal
+./scripts/start-local-dev.sh   # background; logs with timestamps in logs/*.log
+./scripts/stop-local-dev.sh    # stop API, dashboard, and worker
 ```
 
-The script starts `db` in Docker and runs the API, dashboard, and worker locally. To restart only the dashboard during UI work: `./scripts/restart-dashboard.sh`.
+The script starts `db` in Docker and runs the API, dashboard, and worker locally in the background, then returns. To restart only the dashboard during UI work: `./scripts/restart-dashboard.sh`.
 
 ## How To Use The App
 
@@ -85,6 +85,16 @@ Optional API integration tests against PostgreSQL (they truncate application tab
 ```
 
 The script starts Docker Compose’s `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
+
+### Sentiment provider comparison
+
+For any completed query run that already has stored sentiment results (typically from OpenAI), compare **three** ways of labeling the same documents: those stored labels, a fresh **mock** (heuristic) pass, and a fresh **XLM-RoBERTa** pass (`cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual`). The script prints label distributions, pairwise agreement rates, and confusion matrices, and writes JSON to `scripts/all_providers_comparison.json`.
+
+```bash
+python scripts/compare_all_providers.py <query_run_id>
+```
+
+The `query_run_id` is the UUID of a completed `query_runs` row (visible in the API or database). The first XLM-RoBERTa classification loads the model into memory and can take a short while.
 
 ## Troubleshooting
 

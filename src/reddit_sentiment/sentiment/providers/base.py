@@ -7,6 +7,7 @@ from reddit_sentiment.core.enums import SentimentLabel
 
 MOCK_PROVIDER_VERSION = "heuristic-v3"
 OPENAI_PROVIDER_OUTPUT_VERSION = "localized-rationale-v1"
+XLM_ROBERTA_PROVIDER_VERSION = "twitter-xlm-roberta-base-sentiment-multilingual-v1"
 
 
 @dataclass(slots=True)

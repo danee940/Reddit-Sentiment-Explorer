@@ -8,9 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from reddit_sentiment.core.config import Settings, get_settings
 from reddit_sentiment.core.languages import normalize_content_language
 from reddit_sentiment.db.models import Document, QueryRun, SentimentResult
-from reddit_sentiment.sentiment.providers import MockSentimentProvider, OpenAISentimentProvider
+from reddit_sentiment.sentiment.providers import (
+    MockSentimentProvider,
+    OpenAISentimentProvider,
+    XLMRobertaSentimentProvider,
+)
 from reddit_sentiment.sentiment.providers.base import (
     MOCK_PROVIDER_VERSION,
+    XLM_ROBERTA_PROVIDER_VERSION,
     SentimentProvider,
     get_openai_provider_version,
 )
@@ -31,6 +36,8 @@ class SentimentService:
             self.provider = provider
         elif self.settings.llm_provider == "openai" and self.settings.llm_api_key:
             self.provider = OpenAISentimentProvider(self.settings)
+        elif self.settings.llm_provider == "xlm_roberta":
+            self.provider = XLMRobertaSentimentProvider()
         else:
             self.provider = MockSentimentProvider()
         self.provider_name = provider_name or self._get_provider_name()
@@ -100,11 +107,15 @@ class SentimentService:
     def _get_provider_name(self) -> str:
         if self.settings.llm_provider == "openai" and self.settings.llm_api_key:
             return "openai"
+        if self.settings.llm_provider == "xlm_roberta":
+            return "xlm_roberta"
         return "mock"
 
     def _get_provider_version(self, provider_name: str) -> str:
         if provider_name == "openai":
             return get_openai_provider_version(self.settings.llm_model)
+        if provider_name == "xlm_roberta":
+            return XLM_ROBERTA_PROVIDER_VERSION
         return MOCK_PROVIDER_VERSION
 
     def _normalize_rationale(

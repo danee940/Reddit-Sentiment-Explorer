@@ -45,3 +45,4 @@ class AggregateType(StrEnum):
 class ProviderName(StrEnum):
     openai = "openai"
     mock = "mock"
+    xlm_roberta = "xlm_roberta"
