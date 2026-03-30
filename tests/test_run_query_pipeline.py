@@ -9,6 +9,7 @@ from reddit_sentiment.collectors.arctic_shift.client import (
 from reddit_sentiment.composition import QueryPipelineServices
 from reddit_sentiment.core.config import Settings
 from reddit_sentiment.db.models import QueryRun
+from reddit_sentiment.sentiment.providers.base import MOCK_PROVIDER_VERSION
 from reddit_sentiment.services.aggregation_service import AggregationService
 from reddit_sentiment.services.collection_persistence_service import CollectionPersistenceService
 from reddit_sentiment.services.document_match_service import DocumentMatchService
@@ -60,7 +61,12 @@ def test_run_query_pipeline_marks_failure_with_stable_run_id() -> None:
 
         async def get_run(self, run_id: str) -> QueryRun | None:
             tracker["get_run_id"] = run_id
-            return QueryRun(id=run_id, query_id="query-1")
+            return QueryRun(
+                id=run_id,
+                query_id="query-1",
+                sentiment_provider_name="mock",
+                sentiment_provider_version=MOCK_PROVIDER_VERSION,
+            )
 
         async def mark_failed(self, run: QueryRun, error_message: str) -> QueryRun:
             tracker["mark_failed_run_id"] = run.id

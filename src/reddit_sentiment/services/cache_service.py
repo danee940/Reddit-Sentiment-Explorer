@@ -17,6 +17,8 @@ class CacheService:
         query_id: str,
         scope_config: dict,
         language_filter: str,
+        sentiment_provider_name: str,
+        sentiment_provider_version: str,
     ) -> QueryRun | None:
         stmt = (
             select(QueryRun)
@@ -31,6 +33,8 @@ class CacheService:
             if (
                 run.scope_config == scope_config
                 and run.language_filter == normalized_language
+                and run.sentiment_provider_name == sentiment_provider_name
+                and run.sentiment_provider_version == sentiment_provider_version
                 and run.data_fresh_until
                 and run.data_fresh_until >= now
             ):

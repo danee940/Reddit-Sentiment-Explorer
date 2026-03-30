@@ -16,6 +16,7 @@ from reddit_sentiment.composition import (
 from reddit_sentiment.core.config import Settings
 from reddit_sentiment.db.models import Query, QueryRun
 from reddit_sentiment.db.session import get_db_session
+from reddit_sentiment.sentiment.provider_identity import sentiment_provider_identity
 from reddit_sentiment.services.aggregation_service import AggregationService
 from reddit_sentiment.services.cache_service import CacheService
 from reddit_sentiment.services.query_read_service import QueryReadService
@@ -56,8 +57,14 @@ SubredditServiceDep = Annotated[SubredditService, Depends(get_subreddit_service)
 async def get_latest_query_run_or_404(
     query_id: str,
     query_read_service: QueryReadServiceDep,
+    settings: SettingsDep,
 ) -> QueryRun:
-    run = await query_read_service.get_latest_run(query_id)
+    provider_name, provider_version = sentiment_provider_identity(settings)
+    run = await query_read_service.get_latest_run_for_provider(
+        query_id,
+        provider_name,
+        provider_version,
+    )
     if run is None:
         raise HTTPException(status_code=404, detail="Query not found")
     return run

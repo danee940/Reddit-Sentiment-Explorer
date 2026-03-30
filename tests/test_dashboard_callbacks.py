@@ -19,6 +19,8 @@ def test_create_query_sends_content_language_separately_from_ui_language(monkeyp
             "query_run_id": "run-1",
             "status": "pending",
             "is_cached": False,
+            "sentiment_provider_name": "mock",
+            "sentiment_provider_version": "heuristic-v3",
         }
 
     monkeypatch.setattr(query_callbacks, "api_request", fake_api_request)

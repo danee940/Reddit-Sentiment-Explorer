@@ -3,6 +3,7 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
+export PYTHONPATH="${root_dir}/src${PYTHONPATH:+:$PYTHONPATH}"
 
 if [[ -f "${root_dir}/.env" ]]; then
   set -o allexport

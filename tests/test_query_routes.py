@@ -10,6 +10,7 @@ from reddit_sentiment.api.routes import query_routes
 from reddit_sentiment.api.schemas.query import QueryCreateRequest
 from reddit_sentiment.core.config import Settings
 from reddit_sentiment.core.enums import QueryRunStatus, SentimentLabel
+from reddit_sentiment.sentiment.providers.base import MOCK_PROVIDER_VERSION
 from reddit_sentiment.services.query_read_service import QueryRunDocument
 
 
@@ -55,14 +56,31 @@ def test_create_query_uses_dependency_overrides_for_cached_run(app) -> None:
             return SimpleNamespace(id="query-1")
 
     class CacheServiceStub:
-        async def get_fresh_run(self, query_id: str, scope_config: dict, language_filter: str):
+        async def get_fresh_run(
+            self,
+            query_id: str,
+            scope_config: dict,
+            language_filter: str,
+            sentiment_provider_name: str,
+            sentiment_provider_version: str,
+        ):
             assert query_id == "query-1"
             assert scope_config == {"subreddits": ["budapest", "hungary"]}
             assert language_filter == "hu"
-            return SimpleNamespace(id="run-1", status=QueryRunStatus.completed)
+            assert sentiment_provider_name == "mock"
+            assert sentiment_provider_version == MOCK_PROVIDER_VERSION
+            return SimpleNamespace(
+                id="run-1",
+                status=QueryRunStatus.completed,
+                sentiment_provider_name="mock",
+                sentiment_provider_version=MOCK_PROVIDER_VERSION,
+            )
 
     app.dependency_overrides[api_dependencies.get_app_settings] = lambda: SimpleNamespace(
-        default_subreddits=["hungary", "askhungary"]
+        default_subreddits=["hungary", "askhungary"],
+        sentiment_provider="mock",
+        llm_api_key="",
+        llm_model="gpt-4o-mini",
     )
     app.dependency_overrides[api_dependencies.get_query_service] = lambda: QueryServiceStub()
     app.dependency_overrides[api_dependencies.get_cache_service] = lambda: CacheServiceStub()
@@ -83,6 +101,8 @@ def test_create_query_uses_dependency_overrides_for_cached_run(app) -> None:
         "query_run_id": "run-1",
         "status": "completed",
         "is_cached": True,
+        "sentiment_provider_name": "mock",
+        "sentiment_provider_version": MOCK_PROVIDER_VERSION,
     }
 
 
@@ -148,7 +168,12 @@ def test_refresh_query_run_uses_run_and_query_dependencies(app) -> None:
             assert query_id == "query-1"
             assert scope_config == {"subreddits": ["hungary"]}
             assert language_filter == "hu"
-            return SimpleNamespace(id="run-2", status=QueryRunStatus.pending)
+            return SimpleNamespace(
+                id="run-2",
+                status=QueryRunStatus.pending,
+                sentiment_provider_name="mock",
+                sentiment_provider_version=MOCK_PROVIDER_VERSION,
+            )
 
     app.dependency_overrides[api_dependencies.get_query_run_or_404] = lambda: SimpleNamespace(
         id="run-1",
@@ -170,4 +195,6 @@ def test_refresh_query_run_uses_run_and_query_dependencies(app) -> None:
         "query_run_id": "run-2",
         "status": "pending",
         "is_cached": False,
+        "sentiment_provider_name": "mock",
+        "sentiment_provider_version": MOCK_PROVIDER_VERSION,
     }

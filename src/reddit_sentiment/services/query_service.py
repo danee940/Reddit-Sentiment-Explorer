@@ -10,6 +10,7 @@ from reddit_sentiment.core.config import Settings, get_settings
 from reddit_sentiment.core.enums import QueryRunStatus
 from reddit_sentiment.core.languages import DEFAULT_CONTENT_LANGUAGE, normalize_content_language
 from reddit_sentiment.db.models import Query, QueryRun
+from reddit_sentiment.sentiment.provider_identity import sentiment_provider_identity
 
 
 def normalize_term(term: str) -> str:
@@ -49,12 +50,15 @@ class QueryService:
         match_strategy: str = "phrase_then_tokens",
         language_filter: str = DEFAULT_CONTENT_LANGUAGE,
     ) -> QueryRun:
+        provider_name, provider_version = sentiment_provider_identity(self.settings)
         run = QueryRun(
             query_id=query_id,
             status=QueryRunStatus.pending,
             scope_config=scope_config,
             match_strategy=match_strategy,
             language_filter=normalize_content_language(language_filter),
+            sentiment_provider_name=provider_name,
+            sentiment_provider_version=provider_version,
         )
         self.session.add(run)
         await self.session.flush()

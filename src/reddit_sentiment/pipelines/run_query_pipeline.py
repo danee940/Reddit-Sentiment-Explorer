@@ -21,7 +21,7 @@ async def run_query_pipeline(
     services: QueryPipelineServices | None = None,
 ) -> None:
     run_id = query_run.id
-    pipeline_services = services or create_query_pipeline_services(session, term)
+    pipeline_services = services or create_query_pipeline_services(session, term, query_run)
     collection_service = pipeline_services.collection_persistence_service
     match_service = pipeline_services.document_match_service
 

@@ -58,6 +58,8 @@ class QueryRun(Base):
     scope_config: Mapped[dict] = mapped_column(JSON, default=dict)
     match_strategy: Mapped[str] = mapped_column(String(100), default="phrase_then_tokens")
     language_filter: Mapped[str] = mapped_column(String(50), default=DEFAULT_CONTENT_LANGUAGE)
+    sentiment_provider_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    sentiment_provider_version: Mapped[str] = mapped_column(String(100), nullable=False)
     data_fresh_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
 

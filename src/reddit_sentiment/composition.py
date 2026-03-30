@@ -8,17 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from reddit_sentiment.collectors.arctic_shift.client import ArcticShiftCollector
 from reddit_sentiment.core.config import Settings, get_settings
+from reddit_sentiment.db.models import QueryRun
+from reddit_sentiment.sentiment.provider_identity import sentiment_provider_identity
 from reddit_sentiment.sentiment.providers import (
     MockSentimentProvider,
     OpenAISentimentProvider,
     XLMRobertaSentimentProvider,
 )
-from reddit_sentiment.sentiment.providers.base import (
-    MOCK_PROVIDER_VERSION,
-    XLM_ROBERTA_PROVIDER_VERSION,
-    SentimentProvider,
-    get_openai_provider_version,
-)
+from reddit_sentiment.sentiment.providers.base import SentimentProvider
 from reddit_sentiment.services.aggregation_service import AggregationService
 from reddit_sentiment.services.cache_service import CacheService
 from reddit_sentiment.services.collection_persistence_service import (
@@ -80,19 +77,36 @@ def create_sentiment_provider(
     client_factory: AsyncClientFactory | None = None,
 ) -> tuple[SentimentProvider, str, str]:
     active_settings = settings or get_settings()
-    if active_settings.sentiment_provider == "openai" and active_settings.llm_api_key:
-        return (
-            OpenAISentimentProvider(active_settings, client_factory),
-            "openai",
-            get_openai_provider_version(active_settings.llm_model),
-        )
-    if active_settings.sentiment_provider == "xlm_roberta":
-        return (
-            XLMRobertaSentimentProvider(),
-            "xlm_roberta",
-            XLM_ROBERTA_PROVIDER_VERSION,
-        )
-    return MockSentimentProvider(), "mock", MOCK_PROVIDER_VERSION
+    name, version = sentiment_provider_identity(active_settings)
+    if name == "openai":
+        return OpenAISentimentProvider(active_settings, client_factory), name, version
+    if name == "xlm_roberta":
+        return XLMRobertaSentimentProvider(), name, version
+    return MockSentimentProvider(), name, version
+
+
+def create_sentiment_service_for_query_run(
+    session: AsyncSession,
+    query_run: QueryRun,
+    settings: Settings | None = None,
+    client_factory: AsyncClientFactory | None = None,
+) -> SentimentService:
+    active_settings = settings or get_settings()
+    name = query_run.sentiment_provider_name
+    version = query_run.sentiment_provider_version
+    if name == "openai":
+        provider: SentimentProvider = OpenAISentimentProvider(active_settings, client_factory)
+    elif name == "xlm_roberta":
+        provider = XLMRobertaSentimentProvider()
+    else:
+        provider = MockSentimentProvider()
+    return SentimentService(
+        session,
+        settings=active_settings,
+        provider=provider,
+        provider_name=name,
+        provider_version=version,
+    )
 
 
 def create_sentiment_service(
@@ -136,6 +150,7 @@ def create_arctic_shift_collector(
 def create_query_pipeline_services(
     session: AsyncSession,
     term: str,
+    query_run: QueryRun,
     settings: Settings | None = None,
     collector_client_factory: AsyncClientFactory | None = None,
     provider_client_factory: AsyncClientFactory | None = None,
@@ -150,8 +165,9 @@ def create_query_pipeline_services(
         language_service=language_service,
         search_service=search_service,
         collector=create_arctic_shift_collector(active_settings, collector_client_factory),
-        sentiment_service=create_sentiment_service(
+        sentiment_service=create_sentiment_service_for_query_run(
             session,
+            query_run,
             settings=active_settings,
             client_factory=provider_client_factory,
         ),

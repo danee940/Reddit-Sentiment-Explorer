@@ -64,7 +64,7 @@ async def process_run(run_id: str) -> None:
             query_run=run,
             term=query.raw_term,
             subreddit_names=run.scope_config.get("subreddits", []),
-            services=create_query_pipeline_services(session, query.raw_term),
+            services=create_query_pipeline_services(session, query.raw_term, run),
         )
 
 

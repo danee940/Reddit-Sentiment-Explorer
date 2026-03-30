@@ -39,10 +39,17 @@ class QueryReadService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_latest_run(self, query_id: str) -> QueryRun | None:
+    async def get_latest_run_for_provider(
+        self,
+        query_id: str,
+        sentiment_provider_name: str,
+        sentiment_provider_version: str,
+    ) -> QueryRun | None:
         stmt = (
             select(QueryRun)
             .where(QueryRun.query_id == query_id)
+            .where(QueryRun.sentiment_provider_name == sentiment_provider_name)
+            .where(QueryRun.sentiment_provider_version == sentiment_provider_version)
             .order_by(desc(QueryRun.started_at))
         )
         return cast(QueryRun | None, await self.session.scalar(stmt))

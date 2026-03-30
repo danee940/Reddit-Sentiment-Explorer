@@ -22,6 +22,8 @@ class QueryResponse(BaseModel):
     query_run_id: str
     status: QueryRunStatus
     is_cached: bool
+    sentiment_provider_name: str
+    sentiment_provider_version: str
 
 
 class QueryRunResponse(BaseModel):
@@ -35,6 +37,8 @@ class QueryRunResponse(BaseModel):
     data_fresh_until: datetime | None
     error_message: str | None
     language_filter: str
+    sentiment_provider_name: str
+    sentiment_provider_version: str
 
 
 class ChartPayload(BaseModel):

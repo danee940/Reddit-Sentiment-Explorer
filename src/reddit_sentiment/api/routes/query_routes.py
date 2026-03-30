@@ -23,6 +23,7 @@ from reddit_sentiment.api.schemas.query import (
     QueryRunResponse,
 )
 from reddit_sentiment.core.config import Settings
+from reddit_sentiment.sentiment.provider_identity import sentiment_provider_identity
 from reddit_sentiment.services.subreddit_service import SubredditService
 
 router = APIRouter()
@@ -43,10 +44,13 @@ async def create_query(
 ) -> QueryResponse:
     query = await query_service.get_or_create_query(request.term)
     scope_config = build_scope_config(request, settings)
+    provider_name, provider_version = sentiment_provider_identity(settings)
     cached_run = await cache_service.get_fresh_run(
         query.id,
         scope_config,
         request.content_language,
+        provider_name,
+        provider_version,
     )
     if cached_run is not None:
         return QueryResponse(
@@ -54,6 +58,8 @@ async def create_query(
             query_run_id=cached_run.id,
             status=cached_run.status,
             is_cached=True,
+            sentiment_provider_name=cached_run.sentiment_provider_name,
+            sentiment_provider_version=cached_run.sentiment_provider_version,
         )
 
     run = await query_service.create_run(
@@ -61,7 +67,14 @@ async def create_query(
         scope_config=scope_config,
         language_filter=request.content_language,
     )
-    return QueryResponse(query_id=query.id, query_run_id=run.id, status=run.status, is_cached=False)
+    return QueryResponse(
+        query_id=query.id,
+        query_run_id=run.id,
+        status=run.status,
+        is_cached=False,
+        sentiment_provider_name=run.sentiment_provider_name,
+        sentiment_provider_version=run.sentiment_provider_version,
+    )
 
 
 @router.get("/queries/{query_id}", response_model=QueryRunResponse)
@@ -111,6 +124,8 @@ async def refresh_query_run(
         query_run_id=new_run.id,
         status=new_run.status,
         is_cached=False,
+        sentiment_provider_name=new_run.sentiment_provider_name,
+        sentiment_provider_version=new_run.sentiment_provider_version,
     )
 
 

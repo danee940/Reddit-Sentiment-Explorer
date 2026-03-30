@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from reddit_sentiment.core.config import get_settings
+
 pytestmark = pytest.mark.integration
 
 
@@ -126,6 +128,28 @@ def test_create_query_returns_cached_run(app, complete_run) -> None:
     assert second["is_cached"] is True
     assert second["query_run_id"] == first["query_run_id"]
     assert second["query_id"] == first["query_id"]
+
+
+def test_create_query_skips_cache_when_sentiment_provider_changes(
+    app, complete_run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scope = {
+        "term": "provider cache isolation",
+        "subreddits": ["hungary"],
+        "content_language": "en",
+    }
+    with TestClient(app) as client:
+        first = client.post("/queries", json=scope).json()
+    complete_run(first["query_run_id"])
+    monkeypatch.setenv("SENTIMENT_PROVIDER", "xlm_roberta")
+    get_settings.cache_clear()
+    with TestClient(app) as client:
+        second = client.post("/queries", json=scope).json()
+    assert second["is_cached"] is False
+    assert second["query_run_id"] != first["query_run_id"]
+    assert second["query_id"] == first["query_id"]
+    assert second["sentiment_provider_name"] == "xlm_roberta"
+    get_settings.cache_clear()
 
 
 def test_get_unknown_query_returns_404(app) -> None:
