@@ -4,6 +4,12 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
+if [[ -f "${root_dir}/.env" ]]; then
+  set -o allexport
+  source "${root_dir}/.env"
+  set +o allexport
+fi
+
 if ! docker info >/dev/null 2>&1; then
   echo "Docker is not available or the daemon is not running." >&2
   exit 1
@@ -17,7 +23,6 @@ done
 
 docker compose exec -T db createdb -U postgres reddit_sentiment_test 2>/dev/null || true
 
-export INTEGRATION_DATABASE_URL="${INTEGRATION_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment_test}"
 export LLM_PROVIDER="${LLM_PROVIDER:-mock}"
 
 exec python -m pytest tests/integration "$@"
