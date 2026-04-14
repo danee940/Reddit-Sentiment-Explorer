@@ -18,9 +18,7 @@ from reddit_sentiment.sentiment.providers import (
 from reddit_sentiment.sentiment.providers.base import SentimentProvider
 from reddit_sentiment.services.aggregation_service import AggregationService
 from reddit_sentiment.services.cache_service import CacheService
-from reddit_sentiment.services.collection_persistence_service import (
-    CollectionPersistenceService,
-)
+from reddit_sentiment.services.collection_persistence_service import CollectionPersistenceService
 from reddit_sentiment.services.document_match_service import DocumentMatchService
 from reddit_sentiment.services.language_service import LanguageService
 from reddit_sentiment.services.query_read_service import QueryReadService

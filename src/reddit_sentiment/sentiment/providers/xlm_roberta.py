@@ -47,7 +47,7 @@ class XLMRobertaSentimentProvider:
             except ImportError as exc:
                 raise ImportError(
                     "transformers and torch are required for the xlm_roberta provider. "
-                    "Install them with: pip install 'reddit-sentiment[ml]'"
+                    "Install them with: uv sync --extra ml"
                 ) from exc
             logger.info("Loading XLM-RoBERTa sentiment model: %s", _MODEL_NAME)
             self._pipeline = hf_pipeline(

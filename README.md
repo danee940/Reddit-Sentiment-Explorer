@@ -21,6 +21,7 @@ The API and worker run Alembic migrations on startup with a startup lock to prev
 
 - Docker Desktop or Docker Engine + Docker Compose
 - Python `3.12` for local execution (`pyenv` recommended if your system Python is older)
+- `uv` for local dependency management and project commands
 
 ## Environment Variables
 
@@ -49,8 +50,8 @@ docker compose down            # stop
 ## Run Locally
 
 ```bash
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install --upgrade pip && pip install -e ".[dev]"
+uv sync --extra dev
+source .venv/bin/activate
 ./scripts/start-local-dev.sh   # background; logs with timestamps in logs/*.log
 ./scripts/stop-local-dev.sh    # stop API, dashboard, and worker
 ```
@@ -75,13 +76,13 @@ curl -X POST http://localhost:8000/queries \
 ## Testing
 
 ```bash
-python -m pytest
+uv run pytest
 ```
 
 Optional API integration tests against PostgreSQL (they truncate application tables; use a dedicated database). Set `INTEGRATION_DATABASE_URL` in `.env`, then run:
 
 ```bash
-./scripts/run-integration-tests.sh
+uv run ./scripts/run-integration-tests.sh
 ```
 
 The script starts Docker Compose’s `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
@@ -91,7 +92,7 @@ The script starts Docker Compose’s `db` service, creates the test database if 
 For any completed query run that already has stored sentiment results (typically from OpenAI), compare **three** ways of labeling the same documents: those stored labels, a fresh **mock** (heuristic) pass, and a fresh **XLM-RoBERTa** pass (`cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual`). The script prints label distributions, pairwise agreement rates, and confusion matrices, and writes JSON to `scripts/all_providers_comparison.json`.
 
 ```bash
-python scripts/compare_all_providers.py <query_run_id>
+uv run python scripts/compare_all_providers.py <query_run_id>
 ```
 
 The `query_run_id` is the UUID of a completed `query_runs` row (visible in the API or database). The first XLM-RoBERTa classification loads the model into memory and can take a short while.
@@ -101,5 +102,5 @@ The `query_run_id` is the UUID of a completed `query_runs` row (visible in the A
 If local Python commands pick up the wrong database, unset or override `DATABASE_URL`:
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment python -m uvicorn ...
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment uv run python -m uvicorn ...
 ```

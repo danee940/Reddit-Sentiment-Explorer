@@ -26,16 +26,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --extra dev
       - name: Ruff
-        run: ruff check .
+        run: uv run ruff check .
       - name: Mypy
-        run: python -m mypy src/ tests/
+        run: uv run python -m mypy src/ tests/
       - name: Pytest
         env:
           SENTIMENT_PROVIDER: mock
           INTEGRATION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment_test
-        run: pytest
+        run: uv run pytest
