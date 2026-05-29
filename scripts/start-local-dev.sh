@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${ROOT_DIR}/logs"
 PID_FILE="${LOG_DIR}/local-dev.pids"
 
-export PYENV_VERSION="3.12.9"
 export API_BASE_URL="http://localhost:8000"
 export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment"
 export PYTHONPATH="src"
@@ -80,13 +79,13 @@ mkdir -p "${LOG_DIR}"
 : > "${LOG_DIR}/dashboard.log"
 : > "${LOG_DIR}/worker.log"
 
-start_process api pyenv exec python -m uvicorn reddit_sentiment.api.main:app --host 0.0.0.0 --port 8000 --reload --access-log
+start_process api "${ROOT_DIR}/.venv/bin/python" -m uvicorn reddit_sentiment.api.main:app --host 0.0.0.0 --port 8000 --reload --access-log
 API_PID="${STARTED_PID}"
 
-start_process dashboard pyenv exec python -m reddit_sentiment.dashboard_runner
+start_process dashboard "${ROOT_DIR}/.venv/bin/python" -m reddit_sentiment.dashboard_runner
 DASHBOARD_PID="${STARTED_PID}"
 
-start_process worker pyenv exec python -m reddit_sentiment.worker
+start_process worker "${ROOT_DIR}/.venv/bin/python" -m reddit_sentiment.worker
 WORKER_PID="${STARTED_PID}"
 
 {

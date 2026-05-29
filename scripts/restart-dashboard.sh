@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "${ROOT_DIR}"
 
-export PYENV_VERSION="3.12.9"
 export API_BASE_URL="http://localhost:8000"
 export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/reddit_sentiment"
 export PYTHONPATH="src"
@@ -33,4 +32,4 @@ pkill -f "python -m reddit_sentiment.dashboard_runner" 2>/dev/null || true
 pkill -f "gunicorn reddit_sentiment.dashboard:server" 2>/dev/null || true
 free_port 8050
 
-exec pyenv exec python -m reddit_sentiment.dashboard_runner
+exec "${ROOT_DIR}/.venv/bin/python" -m reddit_sentiment.dashboard_runner
