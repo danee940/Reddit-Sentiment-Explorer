@@ -138,8 +138,8 @@ class OpenAISentimentProvider:
     @retry(
         reraise=True,
         retry=retry_if_exception_type((httpx.HTTPError, ValueError, json.JSONDecodeError)),
-        wait=wait_exponential(multiplier=1, min=1, max=8),
-        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=30),
+        stop=stop_after_attempt(5),
     )
     async def _post_completion(self, headers: dict[str, str], payload: dict) -> dict:
         client = self._get_client()

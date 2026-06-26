@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import cast
 
 from sqlalchemy import desc, select
@@ -21,6 +22,8 @@ from reddit_sentiment.sentiment.providers.base import (
     SentimentProvider,
     get_openai_provider_version,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SentimentService:
@@ -88,9 +91,18 @@ class SentimentService:
                 )
 
         predictions = await asyncio.gather(
-            *(classify_one(document) for document in pending)
+            *(classify_one(document) for document in pending),
+            return_exceptions=True,
         )
         for document, prediction in zip(pending, predictions, strict=True):
+            if isinstance(prediction, BaseException):
+                logger.warning(
+                    "sentiment_classification_failed run_id=%s document_id=%s error=%s",
+                    query_run.id,
+                    document.id,
+                    prediction,
+                )
+                continue
             results.append(self._persist_prediction(query_run, document, prediction))
 
         await self._close_provider()

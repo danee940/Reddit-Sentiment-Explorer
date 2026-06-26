@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_retry_attempts: int = 3
     sentiment_confidence_threshold: float = 0.6
-    sentiment_concurrency: int = 8
+    sentiment_concurrency: int = 10
     query_cache_ttl_hours: int = 12
     query_run_stale_after_minutes: int = 30
     default_subreddits: list[str] = Field(
