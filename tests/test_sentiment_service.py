@@ -44,11 +44,16 @@ class FlakyProvider:
         self.aclose_calls += 1
 
 
-def _build_service(provider: FlakyProvider, concurrency: int) -> SentimentService:
+def _build_service(
+    provider: FlakyProvider,
+    concurrency: int,
+    owned_provider: bool = True,
+) -> SentimentService:
     service = SentimentService.__new__(SentimentService)
     service.provider = provider
     service.provider_name = "openai"
     service.provider_version = "test"
+    service._owned_provider = owned_provider
 
     class SettingsStub:
         sentiment_concurrency = concurrency
@@ -104,3 +109,14 @@ def test_classify_documents_persists_all_when_provider_succeeds() -> None:
 
     assert service.persisted == ["doc-1", "doc-2"]  # type: ignore[attr-defined]
     assert len(results) == 2
+
+
+def test_classify_documents_does_not_close_shared_provider() -> None:
+    provider = FlakyProvider(failing_text="never-matches")
+    service = _build_service(provider, concurrency=2, owned_provider=False)
+    query_run = QueryRunStub(id="run-1", language_filter="en")
+    documents = [DocumentStub(id="doc-1", full_text="doc-1-text")]
+
+    asyncio.run(service.classify_documents(query_run, documents))  # type: ignore[arg-type]
+
+    assert provider.aclose_calls == 0

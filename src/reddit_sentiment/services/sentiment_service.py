@@ -34,9 +34,11 @@ class SentimentService:
         provider: SentimentProvider | None = None,
         provider_name: str | None = None,
         provider_version: str | None = None,
+        owned_provider: bool = True,
     ) -> None:
         self.session = session
         self.settings = settings or get_settings()
+        self._owned_provider = owned_provider
         if provider is not None:
             self.provider = provider
         elif self.settings.sentiment_provider == "openai" and self.settings.llm_api_key:
@@ -195,6 +197,8 @@ class SentimentService:
         return result
 
     async def _close_provider(self) -> None:
+        if not self._owned_provider:
+            return
         aclose = getattr(self.provider, "aclose", None)
         if aclose is not None:
             await aclose()

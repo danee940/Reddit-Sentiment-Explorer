@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +29,11 @@ from reddit_sentiment.services.sentiment_service import SentimentService
 from reddit_sentiment.services.subreddit_service import SubredditService
 
 AsyncClientFactory = Callable[..., httpx.AsyncClient]
+
+
+@lru_cache(maxsize=1)
+def _get_shared_openai_provider(settings: Settings) -> OpenAISentimentProvider:
+    return OpenAISentimentProvider(settings)
 
 
 @dataclass(slots=True)
@@ -73,14 +79,16 @@ def create_subreddit_service(
 def create_sentiment_provider(
     settings: Settings | None = None,
     client_factory: AsyncClientFactory | None = None,
-) -> tuple[SentimentProvider, str, str]:
+) -> tuple[SentimentProvider, str, str, bool]:
     active_settings = settings or get_settings()
     name, version = sentiment_provider_identity(active_settings)
     if name == "openai":
-        return OpenAISentimentProvider(active_settings, client_factory), name, version
+        if client_factory is None:
+            return _get_shared_openai_provider(active_settings), name, version, False
+        return OpenAISentimentProvider(active_settings, client_factory), name, version, True
     if name == "xlm_roberta":
-        return XLMRobertaSentimentProvider(), name, version
-    return MockSentimentProvider(), name, version
+        return XLMRobertaSentimentProvider(), name, version, True
+    return MockSentimentProvider(), name, version, True
 
 
 def create_sentiment_service_for_query_run(
@@ -92,8 +100,13 @@ def create_sentiment_service_for_query_run(
     active_settings = settings or get_settings()
     name = query_run.sentiment_provider_name
     version = query_run.sentiment_provider_version
+    owned = True
     if name == "openai":
-        provider: SentimentProvider = OpenAISentimentProvider(active_settings, client_factory)
+        if client_factory is None:
+            provider: SentimentProvider = _get_shared_openai_provider(active_settings)
+            owned = False
+        else:
+            provider = OpenAISentimentProvider(active_settings, client_factory)
     elif name == "xlm_roberta":
         provider = XLMRobertaSentimentProvider()
     else:
@@ -104,6 +117,7 @@ def create_sentiment_service_for_query_run(
         provider=provider,
         provider_name=name,
         provider_version=version,
+        owned_provider=owned,
     )
 
 
@@ -119,13 +133,17 @@ def create_sentiment_service(
     active_provider = provider
     active_provider_name = provider_name
     active_provider_version = provider_version
+    owned = True
     if active_provider is None or active_provider_name is None or active_provider_version is None:
         (
             built_provider,
             built_provider_name,
             built_provider_version,
+            built_owned,
         ) = create_sentiment_provider(active_settings, client_factory)
-        active_provider = active_provider or built_provider
+        if active_provider is None:
+            active_provider = built_provider
+            owned = built_owned
         active_provider_name = active_provider_name or built_provider_name
         active_provider_version = active_provider_version or built_provider_version
     return SentimentService(
@@ -134,6 +152,7 @@ def create_sentiment_service(
         provider=active_provider,
         provider_name=active_provider_name,
         provider_version=active_provider_version,
+        owned_provider=owned,
     )
 
 
