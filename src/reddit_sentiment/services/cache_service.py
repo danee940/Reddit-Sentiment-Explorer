@@ -20,23 +20,20 @@ class CacheService:
         sentiment_provider_name: str,
         sentiment_provider_version: str,
     ) -> QueryRun | None:
+        now = datetime.now(UTC)
+        normalized_language = normalize_content_language(language_filter)
         stmt = (
             select(QueryRun)
             .where(QueryRun.query_id == query_id)
             .where(QueryRun.status == QueryRunStatus.completed)
+            .where(QueryRun.language_filter == normalized_language)
+            .where(QueryRun.sentiment_provider_name == sentiment_provider_name)
+            .where(QueryRun.sentiment_provider_version == sentiment_provider_version)
+            .where(QueryRun.data_fresh_until >= now)
             .order_by(desc(QueryRun.started_at))
         )
         runs = (await self.session.scalars(stmt)).all()
-        now = datetime.now(UTC)
-        normalized_language = normalize_content_language(language_filter)
         for run in runs:
-            if (
-                run.scope_config == scope_config
-                and run.language_filter == normalized_language
-                and run.sentiment_provider_name == sentiment_provider_name
-                and run.sentiment_provider_version == sentiment_provider_version
-                and run.data_fresh_until
-                and run.data_fresh_until >= now
-            ):
+            if run.scope_config == scope_config:
                 return run
         return None
