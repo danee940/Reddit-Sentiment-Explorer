@@ -125,7 +125,8 @@ class ArcticShiftCollector:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code >= 500:
+            skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
+            if skippable:
                 logger.warning(
                     "arctic_shift_comments_skipped post_id=%s status=%s",
                     post_id,
