@@ -47,6 +47,24 @@ docker compose logs -f         # follow logs
 docker compose down            # stop
 ```
 
+## Deploy On Railway
+
+The repo ships three Railway config files so each service in a Railway project can point to the same repo but run a different process. Create three services in the same Railway project and set the `Config-as-code` path on each:
+
+| Service   | Config file              | Purpose                          |
+| --------- | ------------------------ | -------------------------------- |
+| api       | `railway.api.json`       | FastAPI backend (uvicorn)        |
+| dashboard | `railway.dashboard.json` | Plotly Dash UI (gunicorn)        |
+| worker    | `railway.worker.json`    | Background pipeline runner       |
+
+Add a Postgres plugin to the project and link `DATABASE_URL` from it to all three services. The dashboard also needs `API_BASE_URL` set to the API's private address, for example:
+
+```
+API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}
+```
+
+Generate a public domain on the `api` and `dashboard` services. The `worker` does not need public networking.
+
 ## Run Locally
 
 ```bash
