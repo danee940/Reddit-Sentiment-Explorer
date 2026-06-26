@@ -1,6 +1,6 @@
 # Reddit Sentiment Explorer
 
-A query-driven platform for analyzing sentiment of user-entered terms across Reddit communities. Enter a term, pick subreddits and a content language, and the app collects matching Reddit content, runs sentiment classification, and displays charts in a dashboard.
+A query-driven platform for sentiment analysis of user-entered terms across Reddit communities. Enter a term, pick subreddits and a content language, and the app collects matching Reddit content, runs sentiment classification, and displays charts in a dashboard.
 
 Stack: `Arctic Shift` (data), `OpenAI`, `mock`, or local XLM-RoBERTa (`SENTIMENT_PROVIDER=xlm_roberta`, multilingual Transformers model) for sentiment, `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
 
