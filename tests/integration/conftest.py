@@ -125,6 +125,55 @@ def complete_run(clean_database: None) -> Callable[[str], None]:
 
 
 @pytest.fixture
+def fail_run(clean_database: None) -> Callable[[str, str], None]:
+    from datetime import UTC, datetime
+
+    from reddit_sentiment.core.enums import QueryRunStatus
+
+    async def _mark(run_id: str, error_message: str) -> None:
+        factory = get_session_factory()
+        async with factory() as session:
+            run = await session.get(QueryRun, run_id)
+            if run is None:
+                return
+            run.status = QueryRunStatus.failed
+            run.finished_at = datetime.now(UTC)
+            run.error_message = error_message
+            await session.commit()
+        await get_engine().dispose()
+
+    def mark(run_id: str, error_message: str = "simulated failure") -> None:
+        _run_db_op(lambda: _mark(run_id, error_message))
+
+    return mark
+
+
+@pytest.fixture
+def stale_run(clean_database: None) -> Callable[[str], None]:
+    from datetime import UTC, datetime, timedelta
+
+    from reddit_sentiment.core.enums import QueryRunStatus
+
+    async def _mark(run_id: str) -> None:
+        factory = get_session_factory()
+        async with factory() as session:
+            run = await session.get(QueryRun, run_id)
+            if run is None:
+                return
+            run.status = QueryRunStatus.completed
+            now = datetime.now(UTC)
+            run.finished_at = now - timedelta(hours=13)
+            run.data_fresh_until = now - timedelta(hours=1)
+            await session.commit()
+        await get_engine().dispose()
+
+    def mark(run_id: str) -> None:
+        _run_db_op(lambda: _mark(run_id))
+
+    return mark
+
+
+@pytest.fixture
 def fetch_run(clean_database: None) -> Callable[[str], QueryRun | None]:
     async def _get(run_id: str) -> QueryRun | None:
         factory = get_session_factory()

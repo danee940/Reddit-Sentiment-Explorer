@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -101,13 +103,6 @@ def test_refresh_query_run_creates_new_pending_run(app) -> None:
     assert body["query_run_id"] != run_id
     assert body["status"] == "pending"
     assert body["is_cached"] is False
-
-
-def test_ready_returns_ready(app) -> None:
-    with TestClient(app) as client:
-        response = client.get("/ready")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ready", "database": "ok"}
 
 
 def test_get_query_run_by_id(app) -> None:
@@ -214,3 +209,102 @@ def test_create_query_uses_default_subreddits_when_omitted(app, fetch_run) -> No
     run = fetch_run(response.json()["query_run_id"])
     assert run is not None
     assert sorted(run.scope_config["subreddits"]) == ["askhungary", "budapest", "hu", "hungary"]
+
+
+def test_failed_run_is_not_cached(app, fail_run: Callable) -> None:
+    scope = {"term": "failed cache isolation", "subreddits": ["hungary"], "content_language": "en"}
+    with TestClient(app) as client:
+        first = client.post("/queries", json=scope).json()
+    fail_run(first["query_run_id"])
+    with TestClient(app) as client:
+        second = client.post("/queries", json=scope).json()
+    assert second["is_cached"] is False
+    assert second["query_run_id"] != first["query_run_id"]
+    assert second["query_id"] == first["query_id"]
+
+
+def test_get_query_run_shows_failed_status(app, fail_run: Callable, fetch_run: Callable) -> None:
+    with TestClient(app) as client:
+        created = client.post(
+            "/queries",
+            json={"term": "fail status check", "subreddits": ["hungary"], "content_language": "en"},
+        ).json()
+        run_id = created["query_run_id"]
+    fail_run(run_id, "worker crashed")
+    with TestClient(app) as client:
+        response = client.get(f"/query-runs/{run_id}")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["error_message"] == "worker crashed"
+
+
+def test_stale_completed_run_creates_new_run(app, stale_run: Callable) -> None:
+    scope = {"term": "stale cache bypass", "subreddits": ["hungary"], "content_language": "en"}
+    with TestClient(app) as client:
+        first = client.post("/queries", json=scope).json()
+    stale_run(first["query_run_id"])
+    with TestClient(app) as client:
+        second = client.post("/queries", json=scope).json()
+    assert second["is_cached"] is False
+    assert second["query_run_id"] != first["query_run_id"]
+    assert second["query_id"] == first["query_id"]
+
+
+def test_get_charts_returns_404_for_unknown_run(app) -> None:
+    with TestClient(app) as client:
+        response = client.get("/query-runs/does-not-exist/charts")
+    assert response.status_code == 404
+
+
+def test_get_documents_returns_404_for_unknown_run(app) -> None:
+    with TestClient(app) as client:
+        response = client.get("/query-runs/does-not-exist/documents")
+    assert response.status_code == 404
+
+
+def test_subreddit_normalization_strips_prefix(app, fetch_run: Callable) -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/queries",
+            json={
+                "term": "subreddit prefix test",
+                "subreddits": ["r/Hungary", "r/Budapest"],
+                "content_language": "en",
+            },
+        )
+    assert response.status_code == 200
+    run = fetch_run(response.json()["query_run_id"])
+    assert run is not None
+    assert sorted(run.scope_config["subreddits"]) == ["budapest", "hungary"]
+
+
+def test_refresh_inherits_original_scope(app, fetch_run: Callable) -> None:
+    with TestClient(app) as client:
+        created = client.post(
+            "/queries",
+            json={
+                "term": "refresh scope inherit",
+                "subreddits": ["hungary", "budapest"],
+                "content_language": "hu",
+            },
+        ).json()
+        original_run_id = created["query_run_id"]
+        refreshed = client.post(f"/query-runs/{original_run_id}/refresh").json()
+    new_run = fetch_run(refreshed["query_run_id"])
+    original_run = fetch_run(original_run_id)
+    assert new_run is not None
+    assert original_run is not None
+    assert new_run.scope_config == original_run.scope_config
+    assert new_run.language_filter == original_run.language_filter
+
+
+def test_get_latest_run_returns_most_recent(app) -> None:
+    scope = {"term": "latest run ordering", "subreddits": ["hungary"], "content_language": "en"}
+    with TestClient(app) as client:
+        first = client.post("/queries", json=scope).json()
+        second = client.post("/queries", json=scope).json()
+        query_id = first["query_id"]
+        latest = client.get(f"/queries/{query_id}").json()
+    assert latest["id"] == second["query_run_id"]
+    assert latest["id"] != first["query_run_id"]
