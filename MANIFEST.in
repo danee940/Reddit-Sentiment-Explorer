@@ -1,0 +1,3 @@
+include alembic.ini
+recursive-include src/reddit_sentiment/db/migrations *.py
+
