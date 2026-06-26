@@ -63,12 +63,23 @@ class ArcticShiftCollector:
             timeout=60.0,
         ) as client:
             for subreddit_name in subreddit_names:
-                post_payload = await self._request_posts(
-                    client=client,
-                    subreddit_name=subreddit_name,
-                    term=term,
-                    limit=request_limit,
-                )
+                try:
+                    post_payload = await self._request_posts(
+                        client=client,
+                        subreddit_name=subreddit_name,
+                        term=term,
+                        limit=request_limit,
+                    )
+                except httpx.HTTPStatusError as exc:
+                    skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
+                    if skippable:
+                        logger.warning(
+                            "arctic_shift_posts_skipped subreddit=%s status=%s",
+                            subreddit_name,
+                            exc.response.status_code,
+                        )
+                        continue
+                    raise
                 for item in self._extract_items(post_payload):
                     post = self._normalize_post(item)
                     if post is None:
