@@ -46,27 +46,35 @@ async def _should_stamp_existing_schema() -> bool:
 
 
 def _run_migration_command(root_path: Path, should_stamp: bool) -> None:
-    alembic_config = Config(str(root_path / "alembic.ini"))
-    alembic_config.set_main_option(
-        "script_location",
-        str(root_path / "src/reddit_sentiment/db/migrations"),
-    )
-    MIGRATION_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with MIGRATION_LOCK_PATH.open("w", encoding="utf-8") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        if should_stamp:
-            logger.info("Stamping schema to baseline revision %s", ALEMBIC_BASELINE_REVISION)
-            command.stamp(alembic_config, ALEMBIC_BASELINE_REVISION)
-        logger.info("Running Alembic upgrade to head")
-        command.upgrade(alembic_config, "head")
-        logger.info("Migrations complete")
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    try:
+        alembic_config = Config(str(root_path / "alembic.ini"))
+        alembic_config.set_main_option(
+            "script_location",
+            str(root_path / "src/reddit_sentiment/db/migrations"),
+        )
+        MIGRATION_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with MIGRATION_LOCK_PATH.open("w", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            if should_stamp:
+                logger.info("Stamping schema to baseline revision %s", ALEMBIC_BASELINE_REVISION)
+                command.stamp(alembic_config, ALEMBIC_BASELINE_REVISION)
+            logger.info("Running Alembic upgrade to head")
+            command.upgrade(alembic_config, "head")
+            logger.info("Migrations complete")
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        logger.exception("Migration command failed")
+        raise
 
 
 async def initialize_database() -> None:
     logger.info("Initializing database")
-    root_path = Path(__file__).resolve().parents[3]
-    should_stamp = await _should_stamp_existing_schema()
-    await to_thread(_run_migration_command, root_path, should_stamp)
-    await engine.dispose()
-    logger.info("Database initialization complete")
+    try:
+        root_path = Path(__file__).resolve().parents[3]
+        should_stamp = await _should_stamp_existing_schema()
+        await to_thread(_run_migration_command, root_path, should_stamp)
+        await engine.dispose()
+        logger.info("Database initialization complete")
+    except Exception:
+        logger.exception("Database initialization failed")
+        raise
