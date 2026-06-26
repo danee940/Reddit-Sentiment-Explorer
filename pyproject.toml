@@ -64,10 +64,11 @@ source = ["reddit_sentiment"]
 omit = [
   "*/migrations/*",
   "*/alembic/*",
+  "*/dashboard_runner.py",
 ]
 
 [tool.coverage.report]
-fail_under = 70
+fail_under = 90
 show_missing = true
 skip_covered = false
 
