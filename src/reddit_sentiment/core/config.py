@@ -15,8 +15,6 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
     api_base_url: str = "http://localhost:8000"
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 8050
