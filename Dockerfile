@@ -16,4 +16,4 @@ RUN uv sync --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["uvicorn", "reddit_sentiment.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn reddit_sentiment.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

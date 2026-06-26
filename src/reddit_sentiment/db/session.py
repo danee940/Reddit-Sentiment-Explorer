@@ -15,7 +15,11 @@ from reddit_sentiment.core.config import get_settings
 @lru_cache
 def get_engine() -> AsyncEngine:
     settings = get_settings()
-    return create_async_engine(settings.database_url, future=True)
+    return create_async_engine(
+        settings.database_url,
+        future=True,
+        connect_args={"timeout": 10},
+    )
 
 
 @lru_cache
