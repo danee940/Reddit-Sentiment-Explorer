@@ -8,7 +8,7 @@ from reddit_sentiment.composition import (
     QueryPipelineServices,
     create_query_pipeline_services,
 )
-from reddit_sentiment.db.models import Document, QueryRun
+from reddit_sentiment.db.models import QueryRun
 
 logger = logging.getLogger(__name__)
 
@@ -41,31 +41,17 @@ async def run_query_pipeline(
             subreddit_names=subreddit_names,
         )
 
-        persisted_documents: list[Document] = []
-        for post in posts:
-            doc = await collection_service.persist_post(
-                post,
-                query_run.language_filter,
-            )
-            if doc is not None:
-                persisted_documents.append(doc)
+        persisted_documents = await collection_service.persist_posts_and_comments(
+            posts,
+            comments,
+            query_run.language_filter,
+        )
 
-        for comment in comments:
-            doc = await collection_service.persist_comment(
-                comment,
-                query_run.language_filter,
-            )
-            if doc is not None:
-                persisted_documents.append(doc)
-
-        matched_documents: list[Document] = []
-        for document in persisted_documents:
-            if await match_service.match_and_persist(
-                query_run,
-                document,
-                pipeline_services.search_service,
-            ):
-                matched_documents.append(document)
+        matched_documents = await match_service.match_and_persist_batch(
+            query_run,
+            persisted_documents,
+            pipeline_services.search_service,
+        )
 
         await pipeline_services.sentiment_service.classify_documents(
             query_run, matched_documents

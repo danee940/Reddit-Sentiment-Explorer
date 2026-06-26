@@ -12,35 +12,44 @@ class DocumentMatchService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def match_and_persist(
+    async def match_and_persist_batch(
         self,
         query_run: QueryRun,
-        document: Document,
+        documents: list[Document],
         search_service: SearchService,
-    ) -> bool:
-        source_kind = (
-            "comment" if document.source_type == DocumentSourceType.comment else "body"
-        )
-        matched, match_type, matched_terms, relevance_score = search_service.match_text(
-            document.full_text,
-            source_kind,
-        )
-        if not matched or match_type is None:
-            return False
-        exists = await self.session.scalar(
-            select(QueryDocumentMatch)
-            .where(QueryDocumentMatch.query_run_id == query_run.id)
-            .where(QueryDocumentMatch.document_id == document.id)
-        )
-        if exists is not None:
-            return True
-        match = QueryDocumentMatch(
-            query_run_id=query_run.id,
-            document_id=document.id,
-            match_type=match_type.value,
-            matched_terms=matched_terms,
-            relevance_score=relevance_score,
-        )
-        self.session.add(match)
+    ) -> list[Document]:
+        document_ids = [d.id for d in documents]
+        existing_document_ids: set[str] = set()
+        if document_ids:
+            existing_rows = await self.session.scalars(
+                select(QueryDocumentMatch.document_id)
+                .where(QueryDocumentMatch.query_run_id == query_run.id)
+                .where(QueryDocumentMatch.document_id.in_(document_ids))
+            )
+            existing_document_ids = set(existing_rows.all())
+
+        matched: list[Document] = []
+        for document in documents:
+            if document.id in existing_document_ids:
+                matched.append(document)
+                continue
+            source_kind = (
+                "comment" if document.source_type == DocumentSourceType.comment else "body"
+            )
+            is_matched, match_type, matched_terms, relevance_score = search_service.match_text(
+                document.full_text,
+                source_kind,
+            )
+            if not is_matched or match_type is None:
+                continue
+            match = QueryDocumentMatch(
+                query_run_id=query_run.id,
+                document_id=document.id,
+                match_type=match_type.value,
+                matched_terms=matched_terms,
+                relevance_score=relevance_score,
+            )
+            self.session.add(match)
+            matched.append(document)
         await self.session.flush()
-        return True
+        return matched
