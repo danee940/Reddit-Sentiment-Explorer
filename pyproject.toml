@@ -16,6 +16,7 @@ dependencies = [
   "orjson>=3.10.15",
   "pandas>=2.2.3",
   "plotly>=6.0.0",
+  "psycopg2-binary>=2.9.9",
   "pydantic-settings>=2.7.1",
   "python-dotenv>=1.0.1",
   "python-multipart>=0.0.20",
@@ -85,3 +86,4 @@ disable = [
   "W0621",
   "redefined-outer-name",
 ]
+
