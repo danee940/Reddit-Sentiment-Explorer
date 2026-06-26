@@ -32,6 +32,20 @@ class OpenAISentimentProvider:
     ) -> None:
         self.settings = settings or get_settings()
         self.client_factory = client_factory or httpx.AsyncClient
+        self._client: httpx.AsyncClient | None = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = self.client_factory(
+                base_url=self.settings.llm_api_base_url,
+                timeout=60.0,
+            )
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+        self._client = None
 
     @staticmethod
     def _normalize_confidence(value: object) -> float | None:
@@ -128,10 +142,7 @@ class OpenAISentimentProvider:
         stop=stop_after_attempt(3),
     )
     async def _post_completion(self, headers: dict[str, str], payload: dict) -> dict:
-        async with self.client_factory(
-            base_url=self.settings.llm_api_base_url,
-            timeout=60.0,
-        ) as client:
-            response = await client.post("/chat/completions", headers=headers, json=payload)
-            response.raise_for_status()
-            return cast(dict[str, Any], response.json())
+        client = self._get_client()
+        response = await client.post("/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
+        return cast(dict[str, Any], response.json())

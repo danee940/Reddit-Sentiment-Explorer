@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -55,50 +56,54 @@ class ArcticShiftCollector:
         limit: int | None = None,
     ) -> tuple[list[CollectedPost], list[CollectedComment]]:
         request_limit = self.settings.arctic_shift_request_limit if limit is None else limit
-        posts: list[CollectedPost] = []
-        comments: list[CollectedComment] = []
+        semaphore = asyncio.Semaphore(max(1, self.settings.arctic_shift_concurrency))
 
         async with self.client_factory(
             base_url=self.settings.arctic_shift_base_url,
             timeout=60.0,
         ) as client:
-            for subreddit_name in subreddit_names:
-                try:
-                    post_payload = await self._request_posts(
+            post_payloads = await asyncio.gather(
+                *(
+                    self._request_posts(
                         client=client,
                         subreddit_name=subreddit_name,
                         term=term,
                         limit=request_limit,
+                        semaphore=semaphore,
                     )
-                except httpx.HTTPStatusError as exc:
-                    skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
-                    if skippable:
-                        logger.warning(
-                            "arctic_shift_posts_skipped subreddit=%s status=%s",
-                            subreddit_name,
-                            exc.response.status_code,
-                        )
-                        continue
-                    raise
-                for item in self._extract_items(post_payload):
-                    post = self._normalize_post(item)
-                    if post is None:
-                        continue
-                    posts.append(post)
+                    for subreddit_name in subreddit_names
+                )
+            )
 
-                    comment_payload = await self._request_comments(
+            posts: list[CollectedPost] = []
+            for payload in post_payloads:
+                for item in self._extract_items(payload):
+                    post = self._normalize_post(item)
+                    if post is not None:
+                        posts.append(post)
+
+            comment_payloads = await asyncio.gather(
+                *(
+                    self._request_comments(
                         client=client,
                         post_id=post.reddit_post_id,
                         limit=self.settings.arctic_shift_comment_limit,
+                        semaphore=semaphore,
                     )
-                    for comment_item in self._extract_items(comment_payload):
-                        comment = self._normalize_comment(
-                            comment_item,
-                            post.reddit_post_id,
-                            post.subreddit,
-                        )
-                        if comment is not None:
-                            comments.append(comment)
+                    for post in posts
+                )
+            )
+
+        comments: list[CollectedComment] = []
+        for post, payload in zip(posts, comment_payloads, strict=True):
+            for comment_item in self._extract_items(payload):
+                comment = self._normalize_comment(
+                    comment_item,
+                    post.reddit_post_id,
+                    post.subreddit,
+                )
+                if comment is not None:
+                    comments.append(comment)
 
         return posts, comments
 
@@ -108,44 +113,59 @@ class ArcticShiftCollector:
         subreddit_name: str,
         term: str,
         limit: int | Literal["auto"],
+        semaphore: asyncio.Semaphore,
     ) -> dict | list:
-        response = await client.get(
-            "/posts/search",
-            params={
-                "subreddit": subreddit_name,
-                "query": term,
-                "limit": limit,
-            },
-        )
-        response.raise_for_status()
-        return cast(dict[str, Any] | list[Any], response.json())
+        async with semaphore:
+            try:
+                response = await client.get(
+                    "/posts/search",
+                    params={
+                        "subreddit": subreddit_name,
+                        "query": term,
+                        "limit": limit,
+                    },
+                )
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
+                if skippable:
+                    logger.warning(
+                        "arctic_shift_posts_skipped subreddit=%s status=%s",
+                        subreddit_name,
+                        exc.response.status_code,
+                    )
+                    return []
+                raise
+            return cast(dict[str, Any] | list[Any], response.json())
 
     async def _request_comments(
         self,
         client: httpx.AsyncClient,
         post_id: str,
         limit: int | Literal["auto"],
+        semaphore: asyncio.Semaphore,
     ) -> dict | list:
-        response = await client.get(
-            "/comments/search",
-            params={
-                "link_id": post_id,
-                "limit": limit,
-            },
-        )
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
-            if skippable:
-                logger.warning(
-                    "arctic_shift_comments_skipped post_id=%s status=%s",
-                    post_id,
-                    exc.response.status_code,
-                )
-                return []
-            raise
-        return cast(dict[str, Any] | list[Any], response.json())
+        async with semaphore:
+            response = await client.get(
+                "/comments/search",
+                params={
+                    "link_id": post_id,
+                    "limit": limit,
+                },
+            )
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
+                if skippable:
+                    logger.warning(
+                        "arctic_shift_comments_skipped post_id=%s status=%s",
+                        post_id,
+                        exc.response.status_code,
+                    )
+                    return []
+                raise
+            return cast(dict[str, Any] | list[Any], response.json())
 
     @staticmethod
     def _extract_items(payload: dict | list) -> list[dict]:

@@ -67,10 +67,9 @@ async def run_query_pipeline(
             ):
                 matched_documents.append(document)
 
-        for document in matched_documents:
-            await pipeline_services.sentiment_service.classify_document(
-                query_run, document
-            )
+        await pipeline_services.sentiment_service.classify_documents(
+            query_run, matched_documents
+        )
 
         await pipeline_services.aggregation_service.build(query_run.id)
         await pipeline_services.query_service.mark_completed(query_run)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import cast
 
 from sqlalchemy import desc, select
@@ -16,6 +17,7 @@ from reddit_sentiment.sentiment.providers import (
 from reddit_sentiment.sentiment.providers.base import (
     MOCK_PROVIDER_VERSION,
     XLM_ROBERTA_PROVIDER_VERSION,
+    SentimentPrediction,
     SentimentProvider,
     get_openai_provider_version,
 )
@@ -44,32 +46,90 @@ class SentimentService:
         self.provider_version = provider_version or self._get_provider_version(self.provider_name)
 
     async def classify_document(self, query_run: QueryRun, document: Document) -> SentimentResult:
-        existing_result = await self.session.scalar(
-            select(SentimentResult)
-            .where(SentimentResult.query_run_id == query_run.id)
-            .where(SentimentResult.document_id == document.id)
-        )
+        existing_result = await self._get_existing_result(query_run, document)
         if existing_result is not None:
             return existing_result
 
         reusable_result = await self._get_reusable_result(document)
         if reusable_result is not None:
-            result = SentimentResult(
-                query_run_id=query_run.id,
-                document_id=document.id,
-                provider_name=reusable_result.provider_name,
-                provider_version=reusable_result.provider_version,
-                label=reusable_result.label,
-                score_value=reusable_result.score_value,
-                confidence=reusable_result.confidence,
-                rationale=reusable_result.rationale,
-                evidence_phrases=reusable_result.evidence_phrases,
-            )
-            self.session.add(result)
-            await self.session.flush()
-            return result
+            return self._persist_reused_result(query_run, document, reusable_result)
 
         prediction = await self.provider.classify(document.full_text, query_run.language_filter)
+        return self._persist_prediction(query_run, document, prediction)
+
+    async def classify_documents(
+        self, query_run: QueryRun, documents: list[Document]
+    ) -> list[SentimentResult]:
+        results: list[SentimentResult] = []
+        pending: list[Document] = []
+        for document in documents:
+            existing_result = await self._get_existing_result(query_run, document)
+            if existing_result is not None:
+                results.append(existing_result)
+                continue
+            reusable_result = await self._get_reusable_result(document)
+            if reusable_result is not None:
+                results.append(
+                    self._persist_reused_result(query_run, document, reusable_result)
+                )
+                continue
+            pending.append(document)
+
+        semaphore = asyncio.Semaphore(max(1, self.settings.sentiment_concurrency))
+
+        async def classify_one(document: Document) -> SentimentPrediction:
+            async with semaphore:
+                return await self.provider.classify(
+                    document.full_text, query_run.language_filter
+                )
+
+        predictions = await asyncio.gather(
+            *(classify_one(document) for document in pending)
+        )
+        for document, prediction in zip(pending, predictions, strict=True):
+            results.append(self._persist_prediction(query_run, document, prediction))
+
+        await self._close_provider()
+        return results
+
+    async def _get_existing_result(
+        self, query_run: QueryRun, document: Document
+    ) -> SentimentResult | None:
+        return cast(
+            SentimentResult | None,
+            await self.session.scalar(
+                select(SentimentResult)
+                .where(SentimentResult.query_run_id == query_run.id)
+                .where(SentimentResult.document_id == document.id)
+            ),
+        )
+
+    def _persist_reused_result(
+        self,
+        query_run: QueryRun,
+        document: Document,
+        reusable_result: SentimentResult,
+    ) -> SentimentResult:
+        result = SentimentResult(
+            query_run_id=query_run.id,
+            document_id=document.id,
+            provider_name=reusable_result.provider_name,
+            provider_version=reusable_result.provider_version,
+            label=reusable_result.label,
+            score_value=reusable_result.score_value,
+            confidence=reusable_result.confidence,
+            rationale=reusable_result.rationale,
+            evidence_phrases=reusable_result.evidence_phrases,
+        )
+        self.session.add(result)
+        return result
+
+    def _persist_prediction(
+        self,
+        query_run: QueryRun,
+        document: Document,
+        prediction: SentimentPrediction,
+    ) -> SentimentResult:
         result = SentimentResult(
             query_run_id=query_run.id,
             document_id=document.id,
@@ -89,8 +149,12 @@ class SentimentService:
             ),
         )
         self.session.add(result)
-        await self.session.flush()
         return result
+
+    async def _close_provider(self) -> None:
+        aclose = getattr(self.provider, "aclose", None)
+        if aclose is not None:
+            await aclose()
 
     async def _get_reusable_result(self, document: Document) -> SentimentResult | None:
         return cast(

@@ -31,9 +31,11 @@ Copy `.env.example` to `.env`. Key variables:
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `ARCTIC_SHIFT_BASE_URL` | Arctic Shift API base URL |
+| `ARCTIC_SHIFT_CONCURRENCY` | Max concurrent Arctic Shift requests during collection |
 | `SENTIMENT_PROVIDER` | `mock`, `openai`, or `xlm_roberta` |
 | `LLM_API_KEY` | API key for OpenAI |
 | `LLM_MODEL` | Model name, e.g. `gpt-4o-mini` |
+| `SENTIMENT_CONCURRENCY` | Max concurrent sentiment classification calls |
 | `DEFAULT_SUBREDDITS` | Comma-separated default subreddit list |
 | `INTEGRATION_DATABASE_URL` | PostgreSQL URL for integration tests (dedicated database) |
 

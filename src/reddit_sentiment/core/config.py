@@ -22,12 +22,14 @@ class Settings(BaseSettings):
     arctic_shift_base_url: str = "https://arctic-shift.photon-reddit.com/api"
     arctic_shift_request_limit: int | Literal["auto"] = 25
     arctic_shift_comment_limit: int | Literal["auto"] = 100
+    arctic_shift_concurrency: int = 8
     sentiment_provider: str = "mock"
     llm_api_key: str = ""
     llm_api_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
     llm_retry_attempts: int = 3
     sentiment_confidence_threshold: float = 0.6
+    sentiment_concurrency: int = 8
     query_cache_ttl_hours: int = 12
     query_run_stale_after_minutes: int = 30
     default_subreddits: list[str] = Field(
@@ -42,6 +44,11 @@ class Settings(BaseSettings):
         if value.startswith("postgresql://"):
             return value.replace("postgresql://", "postgresql+asyncpg://", 1)
         return value
+
+    @field_validator("llm_api_key", mode="before")
+    @classmethod
+    def strip_llm_api_key(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("default_subreddits", mode="before")
     @classmethod

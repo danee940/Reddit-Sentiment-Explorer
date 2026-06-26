@@ -12,6 +12,7 @@ app = Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
     assets_folder=str(Path(__file__).resolve().parent / "assets"),
+    update_title=None,  # type: ignore[arg-type]
 )
 app.title = "Reddit Sentiment Explorer"
 
