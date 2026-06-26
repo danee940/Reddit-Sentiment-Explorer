@@ -2,7 +2,7 @@
 
 A query-driven platform for sentiment analysis of user-entered terms across Reddit communities. Enter a term, pick subreddits and a content language, and the app collects matching Reddit content, runs sentiment classification, and displays charts in a dashboard.
 
-Stack: `Arctic Shift` (data), `OpenAI`, `mock`, or local XLM-RoBERTa (`SENTIMENT_PROVIDER=xlm_roberta`, multilingual Transformers model) for sentiment, `FastAPI` (API), `Plotly Dash` (dashboard), `PostgreSQL` (storage), `Docker Compose` (orchestration).
+**Stack:** Arctic Shift (data source), FastAPI (API), Plotly Dash (dashboard), PostgreSQL (storage), Docker Compose (orchestration). Sentiment providers: `mock` (heuristic, no cost), `openai` (GPT models), or `xlm_roberta` (local multilingual Transformers model).
 
 ## Architecture
 
@@ -39,12 +39,13 @@ Copy `.env.example` to `.env`. Key variables:
 | `DEFAULT_SUBREDDITS` | Comma-separated default subreddit list |
 | `INTEGRATION_DATABASE_URL` | PostgreSQL URL for integration tests (dedicated database) |
 
-Use `SENTIMENT_PROVIDER=mock` for development without API cost for classification.
+Use `SENTIMENT_PROVIDER=mock` for development without API cost.
 
 ## Run With Docker
 
 ```bash
-docker compose up --build -d   # start
+docker compose up -d           # start
+docker compose up --build -d   # start and rebuild images (after code changes)
 docker compose logs -f         # follow logs
 docker compose down            # stop
 ```
@@ -59,10 +60,10 @@ The repo ships three Railway config files so each service in a Railway project c
 | dashboard | `railway.dashboard.json` | Plotly Dash UI (gunicorn)        |
 | worker    | `railway.worker.json`    | Background pipeline runner       |
 
-Add a Postgres plugin to the project and link `DATABASE_URL` from it to all three services. The dashboard also needs `API_BASE_URL` set to the API's private address, for example:
+Add a Postgres plugin to the project and link `DATABASE_URL` from it to the `api` and `worker` services. The dashboard does not need `DATABASE_URL`; it only needs `API_BASE_URL` set to the API's private address:
 
 ```
-API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}
+API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8080
 ```
 
 Generate a public domain on the `api` and `dashboard` services. The `worker` does not need public networking.
@@ -81,7 +82,7 @@ The script starts `db` in Docker and runs the API, dashboard, and worker locally
 ## How To Use The App
 
 1. Open `http://localhost:8050`
-2. Enter a search term and review the subreddit list
+2. Enter a search term, select subreddits, and choose a content language (used to filter documents by language before sentiment classification)
 3. Submit the query and wait for the run to complete
 4. Inspect sentiment charts, heatmap, subreddit breakdown, phrase drivers, and matched documents
 
@@ -90,7 +91,7 @@ API shortcut:
 ```bash
 curl -X POST http://localhost:8000/queries \
   -H "Content-Type: application/json" \
-  -d '{"term":"Big Mac","subreddits":["hungary","askhungary","budapest"],"content_language":"hu"}'
+  -d '{"term":"climate change","subreddits":["worldnews","science","environment"],"content_language":"en"}'
 ```
 
 ## Testing
@@ -102,10 +103,12 @@ uv run pytest
 Optional API integration tests against PostgreSQL (they truncate application tables; use a dedicated database). Set `INTEGRATION_DATABASE_URL` in `.env`, then run:
 
 ```bash
-uv run ./scripts/run-integration-tests.sh
+./scripts/run-integration-tests.sh
 ```
 
-The script starts Docker Compose’s `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
+The script starts Docker Compose's `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
+
+## Scripts
 
 ### Sentiment provider comparison
 
