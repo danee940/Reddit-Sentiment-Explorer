@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from logging.config import fileConfig
-
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
@@ -13,9 +11,6 @@ config = context.config
 settings = get_settings()
 sync_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 config.set_main_option("sqlalchemy.url", sync_url)
-
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
@@ -33,7 +28,10 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"connect_timeout": 10},
+        connect_args={
+            "connect_timeout": 10,
+            "options": "-c lock_timeout=10000 -c statement_timeout=60000",
+        },
     )
 
     with connectable.connect() as connection:

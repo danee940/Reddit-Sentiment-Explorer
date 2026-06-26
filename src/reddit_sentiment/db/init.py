@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import fcntl
 import logging
+import os
+import threading
 from asyncio import to_thread
 from pathlib import Path
 
@@ -46,22 +48,28 @@ async def _should_stamp_existing_schema() -> bool:
 
 
 def _run_migration_command(root_path: Path, should_stamp: bool) -> None:
+    logger.info("Migration thread started pid=%s tid=%s", os.getpid(), threading.get_ident())
     try:
+        logger.info("Loading alembic config")
         alembic_config = Config(str(root_path / "alembic.ini"))
         alembic_config.set_main_option(
             "script_location",
             str(root_path / "src/reddit_sentiment/db/migrations"),
         )
+        logger.info("Acquiring migration file lock at %s", MIGRATION_LOCK_PATH)
         MIGRATION_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
         with MIGRATION_LOCK_PATH.open("w", encoding="utf-8") as lock_file:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            logger.info("File lock acquired")
             if should_stamp:
                 logger.info("Stamping schema to baseline revision %s", ALEMBIC_BASELINE_REVISION)
                 command.stamp(alembic_config, ALEMBIC_BASELINE_REVISION)
-            logger.info("Running Alembic upgrade to head")
+            logger.info("Calling command.upgrade(head)")
             command.upgrade(alembic_config, "head")
-            logger.info("Migrations complete")
+            logger.info("command.upgrade returned")
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            logger.info("File lock released")
+        logger.info("Migrations complete")
     except Exception:
         logger.exception("Migration command failed")
         raise
