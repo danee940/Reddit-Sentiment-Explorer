@@ -12,7 +12,14 @@ def test_health_returns_ok(app) -> None:
     with TestClient(app) as client:
         response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "database": "ok"}
+    assert response.json() == {"status": "ok"}
+
+
+def test_ready_returns_database_ok(app) -> None:
+    with TestClient(app) as client:
+        response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready", "database": "ok"}
 
 
 def test_create_query_returns_pending_run(app) -> None:
