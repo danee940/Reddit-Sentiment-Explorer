@@ -55,7 +55,6 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def convert_database_url_to_async(cls, value: str) -> str:
-        """Convert sync postgresql:// URLs to async postgresql+asyncpg://"""
         if value and value.startswith("postgresql://"):
             return value.replace("postgresql://", "postgresql+asyncpg://", 1)
         return value
