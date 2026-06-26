@@ -115,28 +115,18 @@ class ArcticShiftCollector:
         limit: int | Literal["auto"],
         semaphore: asyncio.Semaphore,
     ) -> dict | list:
-        async with semaphore:
-            try:
-                response = await client.get(
-                    "/posts/search",
-                    params={
-                        "subreddit": subreddit_name,
-                        "query": term,
-                        "limit": limit,
-                    },
-                )
-                response.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
-                if skippable:
-                    logger.warning(
-                        "arctic_shift_posts_skipped subreddit=%s status=%s",
-                        subreddit_name,
-                        exc.response.status_code,
-                    )
-                    return []
-                raise
-            return cast(dict[str, Any] | list[Any], response.json())
+        return await self._request_with_retry(
+            client=client,
+            path="/posts/search",
+            params={
+                "subreddit": subreddit_name,
+                "query": term,
+                "limit": limit,
+            },
+            semaphore=semaphore,
+            skip_event="arctic_shift_posts_skipped",
+            skip_context=f"subreddit={subreddit_name}",
+        )
 
     async def _request_comments(
         self,
@@ -145,27 +135,52 @@ class ArcticShiftCollector:
         limit: int | Literal["auto"],
         semaphore: asyncio.Semaphore,
     ) -> dict | list:
+        return await self._request_with_retry(
+            client=client,
+            path="/comments/search",
+            params={
+                "link_id": post_id,
+                "limit": limit,
+            },
+            semaphore=semaphore,
+            skip_event="arctic_shift_comments_skipped",
+            skip_context=f"post_id={post_id}",
+        )
+
+    async def _request_with_retry(
+        self,
+        client: httpx.AsyncClient,
+        path: str,
+        params: dict[str, Any],
+        semaphore: asyncio.Semaphore,
+        skip_event: str,
+        skip_context: str,
+    ) -> dict | list:
+        max_retries = max(0, self.settings.arctic_shift_max_retries)
+        backoff = max(0.0, self.settings.arctic_shift_retry_backoff)
         async with semaphore:
-            response = await client.get(
-                "/comments/search",
-                params={
-                    "link_id": post_id,
-                    "limit": limit,
-                },
-            )
-            try:
-                response.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                skippable = exc.response.status_code in {422} or exc.response.status_code >= 500
-                if skippable:
-                    logger.warning(
-                        "arctic_shift_comments_skipped post_id=%s status=%s",
-                        post_id,
-                        exc.response.status_code,
-                    )
+            for attempt in range(max_retries + 1):
+                try:
+                    response = await client.get(path, params=params)
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    transient = status_code in {422} or status_code >= 500
+                    if not transient:
+                        raise
+                    if attempt < max_retries:
+                        logger.warning(
+                            "arctic_shift_request_retry %s status=%s attempt=%s",
+                            skip_context,
+                            status_code,
+                            attempt + 1,
+                        )
+                        await asyncio.sleep(backoff * (2**attempt))
+                        continue
+                    logger.warning("%s %s status=%s", skip_event, skip_context, status_code)
                     return []
-                raise
-            return cast(dict[str, Any] | list[Any], response.json())
+                return cast(dict[str, Any] | list[Any], response.json())
+            return []
 
     @staticmethod
     def _extract_items(payload: dict | list) -> list[dict]:

@@ -1,4 +1,90 @@
+import asyncio
+
+import httpx
+import pytest
+
 from reddit_sentiment.collectors.arctic_shift.client import ArcticShiftCollector
+from reddit_sentiment.core.config import Settings
+
+
+def _make_collector(transport: httpx.MockTransport, max_retries: int = 2) -> ArcticShiftCollector:
+    settings = Settings(
+        arctic_shift_max_retries=max_retries,
+        arctic_shift_retry_backoff=0.0,
+    )
+
+    def client_factory(**kwargs: object) -> httpx.AsyncClient:
+        return httpx.AsyncClient(transport=transport, base_url="https://example.test")
+
+    return ArcticShiftCollector(settings=settings, client_factory=client_factory)
+
+
+async def test_request_retries_transient_status_then_succeeds() -> None:
+    attempts = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            return httpx.Response(422, json={"error": "transient"})
+        return httpx.Response(200, json={"data": [{"id": "post1", "subreddit": "kde"}]})
+
+    collector = _make_collector(httpx.MockTransport(handler))
+    async with collector.client_factory() as client:
+        semaphore = asyncio.Semaphore(1)
+        payload = await collector._request_posts(
+            client=client,
+            subreddit_name="kde",
+            term="windows",
+            limit=100,
+            semaphore=semaphore,
+        )
+
+    assert attempts["count"] == 3
+    assert ArcticShiftCollector._extract_items(payload) == [{"id": "post1", "subreddit": "kde"}]
+
+
+async def test_request_skips_after_exhausting_retries() -> None:
+    attempts = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["count"] += 1
+        return httpx.Response(422, json={"error": "always transient"})
+
+    collector = _make_collector(httpx.MockTransport(handler), max_retries=2)
+    async with collector.client_factory() as client:
+        semaphore = asyncio.Semaphore(1)
+        payload = await collector._request_posts(
+            client=client,
+            subreddit_name="kde",
+            term="windows",
+            limit=100,
+            semaphore=semaphore,
+        )
+
+    assert attempts["count"] == 3
+    assert payload == []
+
+
+async def test_request_does_not_retry_non_transient_status() -> None:
+    attempts = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["count"] += 1
+        return httpx.Response(400, json={"error": "'limit' must be between 1 and 100"})
+
+    collector = _make_collector(httpx.MockTransport(handler), max_retries=2)
+    async with collector.client_factory() as client:
+        semaphore = asyncio.Semaphore(1)
+        with pytest.raises(httpx.HTTPStatusError):
+            await collector._request_posts(
+                client=client,
+                subreddit_name="kde",
+                term="windows",
+                limit=101,
+                semaphore=semaphore,
+            )
+
+    assert attempts["count"] == 1
 
 
 def test_extract_items_supports_data_list_payload() -> None:

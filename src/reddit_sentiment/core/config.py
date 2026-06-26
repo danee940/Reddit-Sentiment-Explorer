@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     arctic_shift_request_limit: int | Literal["auto"] = 25
     arctic_shift_comment_limit: int | Literal["auto"] = 100
     arctic_shift_concurrency: int = 8
+    arctic_shift_max_retries: int = 3
+    arctic_shift_retry_backoff: float = 0.5
     sentiment_provider: str = "mock"
     llm_api_key: str = ""
     llm_api_base_url: str = "https://api.openai.com/v1"
