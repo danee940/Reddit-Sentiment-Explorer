@@ -130,9 +130,8 @@ async def refresh_query_run(
 
 
 @router.get("/health")
-async def health(session: DBSession) -> dict[str, str]:
-    await session.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "ok"}
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 @router.get("/ready")
