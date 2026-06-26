@@ -32,8 +32,8 @@ AsyncClientFactory = Callable[..., httpx.AsyncClient]
 
 
 @lru_cache(maxsize=1)
-def _get_shared_openai_provider(settings: Settings) -> OpenAISentimentProvider:
-    return OpenAISentimentProvider(settings)
+def _get_shared_openai_provider() -> OpenAISentimentProvider:
+    return OpenAISentimentProvider(get_settings())
 
 
 @dataclass(slots=True)
@@ -84,7 +84,7 @@ def create_sentiment_provider(
     name, version = sentiment_provider_identity(active_settings)
     if name == "openai":
         if client_factory is None:
-            return _get_shared_openai_provider(active_settings), name, version, False
+            return _get_shared_openai_provider(), name, version, False
         return OpenAISentimentProvider(active_settings, client_factory), name, version, True
     if name == "xlm_roberta":
         return XLMRobertaSentimentProvider(), name, version, True
@@ -103,7 +103,7 @@ def create_sentiment_service_for_query_run(
     owned = True
     if name == "openai":
         if client_factory is None:
-            provider: SentimentProvider = _get_shared_openai_provider(active_settings)
+            provider: SentimentProvider = _get_shared_openai_provider()
             owned = False
         else:
             provider = OpenAISentimentProvider(active_settings, client_factory)
