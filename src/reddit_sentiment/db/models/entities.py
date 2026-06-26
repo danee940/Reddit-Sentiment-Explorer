@@ -46,9 +46,13 @@ class Query(Base):
 
 class QueryRun(Base):
     __tablename__ = "query_runs"
+    __table_args__ = (
+        Index("ix_query_runs_status_started_at", "status", "started_at"),
+        Index("ix_query_runs_query_id_status_started_at", "query_id", "status", "started_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    query_id: Mapped[str] = mapped_column(ForeignKey("queries.id"), index=True, nullable=False)
+    query_id: Mapped[str] = mapped_column(ForeignKey("queries.id"), nullable=False)
     status: Mapped[QueryRunStatus] = mapped_column(
         Enum(QueryRunStatus, native_enum=False),
         default=QueryRunStatus.pending,
@@ -151,7 +155,10 @@ class Document(Base):
 
 class QueryDocumentMatch(Base):
     __tablename__ = "query_document_matches"
-    __table_args__ = (UniqueConstraint("query_run_id", "document_id"),)
+    __table_args__ = (
+        UniqueConstraint("query_run_id", "document_id"),
+        Index("ix_query_document_matches_document_id", "document_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
     query_run_id: Mapped[str] = mapped_column(
