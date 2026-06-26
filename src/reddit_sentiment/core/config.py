@@ -36,6 +36,15 @@ class Settings(BaseSettings):
         default_factory=lambda: ["hungary", "askhungary", "budapest", "hu"]
     )
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+asyncpg://", 1)
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return value
+
     @field_validator("default_subreddits", mode="before")
     @classmethod
     def split_csv_values(cls, value: str | list[str]) -> list[str]:

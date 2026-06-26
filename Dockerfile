@@ -9,7 +9,7 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.19 /uv /uvx /bin/
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md alembic.ini ./
 COPY src ./src
 
 RUN uv sync --no-dev
