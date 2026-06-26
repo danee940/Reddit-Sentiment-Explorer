@@ -59,13 +59,20 @@ async def process_run(run_id: str) -> None:
             return
 
         logger.info("Processing run %s", run.id)
-        await run_query_pipeline(
-            session=session,
-            query_run=run,
-            term=query.raw_term,
-            subreddit_names=run.scope_config.get("subreddits", []),
-            services=create_query_pipeline_services(session, query.raw_term, run),
-        )
+        try:
+            await run_query_pipeline(
+                session=session,
+                query_run=run,
+                term=query.raw_term,
+                subreddit_names=run.scope_config.get("subreddits", []),
+                services=create_query_pipeline_services(session, query.raw_term, run),
+            )
+        except Exception:
+            logger.exception("Unhandled error processing run %s", run.id)
+            run.status = QueryRunStatus.failed
+            run.error_message = "An unexpected error occurred."
+            await session.commit()
+            raise
 
 
 async def process_pending_runs(poll_interval: int = 10) -> None:

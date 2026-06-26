@@ -105,3 +105,74 @@ def test_process_run_marks_missing_query_failed(monkeypatch) -> None:
     assert run.status == worker.QueryRunStatus.failed
     assert run.error_message == "Query not found."
     assert session.commit_calls == 1
+
+
+class QueryStub:
+    def __init__(self) -> None:
+        self.raw_term = "linux"
+
+
+def _make_query_read_service_stub(run: RunStub, query: QueryStub | None):
+    class QueryReadServiceStub:
+        async def get_run(self, run_id: str):
+            return run
+
+        async def get_query(self, query_id: str):
+            return query
+
+    return QueryReadServiceStub()
+
+
+def test_process_run_marks_failed_when_pipeline_raises(monkeypatch) -> None:
+    session = SessionStub()
+    run = RunStub()
+
+    async def failing_pipeline(**kwargs) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(worker, "get_session_factory", lambda: lambda: SessionContextStub(session))
+    monkeypatch.setattr(
+        worker,
+        "create_query_read_service",
+        lambda session_arg: _make_query_read_service_stub(run, QueryStub()),
+    )
+    monkeypatch.setattr(worker, "create_query_pipeline_services", lambda *a, **kw: object())
+    monkeypatch.setattr(worker, "run_query_pipeline", failing_pipeline)
+
+    try:
+        asyncio.run(worker.process_run("run-1"))
+    except RuntimeError:
+        pass
+
+    assert run.status == worker.QueryRunStatus.failed
+    assert run.error_message == "An unexpected error occurred."
+    assert session.commit_calls == 1
+
+
+def test_process_run_marks_failed_when_services_construction_raises(monkeypatch) -> None:
+    session = SessionStub()
+    run = RunStub()
+
+    def raising_services(*args, **kwargs):
+        raise TypeError("unhashable type: 'Settings'")
+
+    async def unexpected_pipeline(**kwargs) -> None:
+        raise AssertionError("pipeline should not be reached")
+
+    monkeypatch.setattr(worker, "get_session_factory", lambda: lambda: SessionContextStub(session))
+    monkeypatch.setattr(
+        worker,
+        "create_query_read_service",
+        lambda session_arg: _make_query_read_service_stub(run, QueryStub()),
+    )
+    monkeypatch.setattr(worker, "create_query_pipeline_services", raising_services)
+    monkeypatch.setattr(worker, "run_query_pipeline", unexpected_pipeline)
+
+    try:
+        asyncio.run(worker.process_run("run-1"))
+    except TypeError:
+        pass
+
+    assert run.status == worker.QueryRunStatus.failed
+    assert run.error_message == "An unexpected error occurred."
+    assert session.commit_calls == 1
