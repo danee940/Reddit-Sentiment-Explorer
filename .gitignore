@@ -47,3 +47,5 @@ scripts/**/*.json
 # Logs
 *.log
 logs
+
+coverage.xml

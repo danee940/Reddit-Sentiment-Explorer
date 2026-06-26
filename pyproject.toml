@@ -34,6 +34,7 @@ dev = [
   "mypy>=1.13.0",
   "pytest>=8.3.4",
   "pytest-asyncio>=0.25.3",
+  "pytest-cov>=6.0.0",
   "ruff>=0.9.7",
 ]
 
@@ -50,12 +51,25 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=reddit_sentiment --cov-report=term-missing --cov-report=xml"
 markers = [
   "integration: exercises the API against a real PostgreSQL database",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning:starlette",
 ]
+
+[tool.coverage.run]
+source = ["reddit_sentiment"]
+omit = [
+  "*/migrations/*",
+  "*/alembic/*",
+]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
 
 [tool.ruff]
 line-length = 100
@@ -88,5 +102,10 @@ disable = [
   "C0116",
   "W0621",
   "redefined-outer-name",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
 ]
 
