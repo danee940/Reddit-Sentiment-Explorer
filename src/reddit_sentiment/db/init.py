@@ -72,8 +72,9 @@ async def initialize_database() -> None:
     try:
         root_path = Path(__file__).resolve().parents[3]
         should_stamp = await _should_stamp_existing_schema()
-        await to_thread(_run_migration_command, root_path, should_stamp)
         await engine.dispose()
+        logger.info("Async engine disposed before migration")
+        await to_thread(_run_migration_command, root_path, should_stamp)
         logger.info("Database initialization complete")
     except Exception:
         logger.exception("Database initialization failed")
