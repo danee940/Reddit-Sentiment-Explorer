@@ -52,13 +52,6 @@ class Settings(BaseSettings):
                 return "auto"
         return int(value)
 
-    @field_validator("database_url", mode="before")
-    @classmethod
-    def convert_database_url_to_async(cls, value: str) -> str:
-        if value and value.startswith("postgresql://"):
-            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return value
-
 
 @lru_cache
 def get_settings() -> Settings:
