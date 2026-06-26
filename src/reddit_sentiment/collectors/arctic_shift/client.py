@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -8,6 +9,8 @@ from typing import Any, Literal, cast
 import httpx
 
 from reddit_sentiment.core.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -119,7 +122,17 @@ class ArcticShiftCollector:
                 "limit": limit,
             },
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code >= 500:
+                logger.warning(
+                    "arctic_shift_comments_skipped post_id=%s status=%s",
+                    post_id,
+                    exc.response.status_code,
+                )
+                return []
+            raise
         return cast(dict[str, Any] | list[Any], response.json())
 
     @staticmethod
