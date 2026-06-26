@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "gunicorn reddit_sentiment.dashboard:server --bind 0.0.0.0:${PORT:-8050} --workers 2 --timeout 60",
+    "startCommand": "sh -c 'gunicorn reddit_sentiment.dashboard:server --bind 0.0.0.0:${PORT:-8050} --workers 2 --timeout 60'",
     "healthcheckPath": "/",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
