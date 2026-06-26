@@ -60,14 +60,18 @@ class SentimentService:
     async def classify_documents(
         self, query_run: QueryRun, documents: list[Document]
     ) -> list[SentimentResult]:
+        document_ids = [document.id for document in documents]
+        existing_by_document = await self._get_existing_results(query_run, document_ids)
+        reusable_by_document = await self._get_reusable_results(document_ids)
+
         results: list[SentimentResult] = []
         pending: list[Document] = []
         for document in documents:
-            existing_result = await self._get_existing_result(query_run, document)
+            existing_result = existing_by_document.get(document.id)
             if existing_result is not None:
                 results.append(existing_result)
                 continue
-            reusable_result = await self._get_reusable_result(document)
+            reusable_result = reusable_by_document.get(document.id)
             if reusable_result is not None:
                 results.append(
                     self._persist_reused_result(query_run, document, reusable_result)
@@ -103,6 +107,33 @@ class SentimentService:
                 .where(SentimentResult.document_id == document.id)
             ),
         )
+
+    async def _get_existing_results(
+        self, query_run: QueryRun, document_ids: list[str]
+    ) -> dict[str, SentimentResult]:
+        if not document_ids:
+            return {}
+        rows = await self.session.scalars(
+            select(SentimentResult)
+            .where(SentimentResult.query_run_id == query_run.id)
+            .where(SentimentResult.document_id.in_(document_ids))
+        )
+        return {row.document_id: row for row in rows}
+
+    async def _get_reusable_results(
+        self, document_ids: list[str]
+    ) -> dict[str, SentimentResult]:
+        if not document_ids:
+            return {}
+        rows = await self.session.scalars(
+            select(SentimentResult)
+            .where(SentimentResult.document_id.in_(document_ids))
+            .where(SentimentResult.provider_name == self.provider_name)
+            .where(SentimentResult.provider_version == self.provider_version)
+            .distinct(SentimentResult.document_id)
+            .order_by(SentimentResult.document_id, desc(SentimentResult.created_at))
+        )
+        return {row.document_id: row for row in rows}
 
     def _persist_reused_result(
         self,

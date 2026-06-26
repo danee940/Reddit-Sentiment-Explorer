@@ -10,6 +10,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -169,7 +170,16 @@ class QueryDocumentMatch(Base):
 
 class SentimentResult(Base):
     __tablename__ = "sentiment_results"
-    __table_args__ = (UniqueConstraint("query_run_id", "document_id"),)
+    __table_args__ = (
+        UniqueConstraint("query_run_id", "document_id"),
+        Index(
+            "ix_sentiment_results_reuse_lookup",
+            "document_id",
+            "provider_name",
+            "provider_version",
+            "created_at",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
     query_run_id: Mapped[str] = mapped_column(

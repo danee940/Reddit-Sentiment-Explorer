@@ -26,6 +26,7 @@ class CollectionPersistenceService:
         self.language_service = language_service
         self.search_service = search_service
         self.default_subreddits = default_subreddits
+        self._subreddit_cache: dict[str, Subreddit] = {}
 
     async def persist_post(
         self,
@@ -130,16 +131,19 @@ class CollectionPersistenceService:
         )
 
     async def _get_or_create_subreddit(self, name: str) -> Subreddit:
+        cached = self._subreddit_cache.get(name)
+        if cached is not None:
+            return cached
         subreddit = await self.session.scalar(select(Subreddit).where(Subreddit.name == name))
-        if subreddit is not None:
-            return subreddit
-        subreddit = Subreddit(
-            name=name,
-            is_enabled=True,
-            is_core=name in self.default_subreddits,
-        )
-        self.session.add(subreddit)
-        await self.session.flush()
+        if subreddit is None:
+            subreddit = Subreddit(
+                name=name,
+                is_enabled=True,
+                is_core=name in self.default_subreddits,
+            )
+            self.session.add(subreddit)
+            await self.session.flush()
+        self._subreddit_cache[name] = subreddit
         return subreddit
 
     async def _check_language_and_persist_document(
