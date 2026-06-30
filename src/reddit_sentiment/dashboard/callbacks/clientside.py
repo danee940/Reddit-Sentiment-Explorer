@@ -19,17 +19,17 @@ function(_, currentLanguage) {
     const supportedLanguages = ["en", "hu"];
     const normalizeLanguage = (value) => {
         if (!value) {
-            return "en";
+            return "hu";
         }
         const baseLanguage = String(value).toLowerCase().replace("_", "-").split("-", 1)[0];
-        return supportedLanguages.includes(baseLanguage) ? baseLanguage : "en";
+        return supportedLanguages.includes(baseLanguage) ? baseLanguage : "hu";
     };
     if (currentLanguage && supportedLanguages.includes(currentLanguage)) {
         return currentLanguage;
     }
     const browserLanguage = (navigator.languages && navigator.languages.length > 0)
         ? navigator.languages[0]
-        : (navigator.language || navigator.userLanguage || "en");
+        : (navigator.language || navigator.userLanguage || "hu");
     return normalizeLanguage(browserLanguage);
 }
 """
