@@ -108,18 +108,6 @@ Optional API integration tests against PostgreSQL (they truncate application tab
 
 The script starts Docker Compose's `db` service, creates the test database if needed, and runs `pytest tests/integration`. CI sets `INTEGRATION_DATABASE_URL` as a workflow environment variable and runs the same suite against a Postgres service container.
 
-## Scripts
-
-### Sentiment provider comparison
-
-For any completed query run that already has stored sentiment results (typically from OpenAI), compare **three** ways of labeling the same documents: those stored labels, a fresh **mock** (heuristic) pass, and a fresh **XLM-RoBERTa** pass (`cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual`). The script prints label distributions, pairwise agreement rates, and confusion matrices, and writes JSON to `scripts/all_providers_comparison.json`.
-
-```bash
-uv run python scripts/compare_all_providers.py <query_run_id>
-```
-
-The `query_run_id` is the UUID of a completed `query_runs` row (visible in the API or database). The first XLM-RoBERTa classification loads the model into memory and can take a short while.
-
 ## Troubleshooting
 
 If local Python commands pick up the wrong database, unset or override `DATABASE_URL`:
